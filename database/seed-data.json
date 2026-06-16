@@ -1,0 +1,49 @@
+{
+  "settings": {
+    "name": "DFB Smart Shop",
+    "address": "Felix Y. Manalo St., San Isidro, Cainta, Rizal",
+    "contact": "0917 555 0100",
+    "hours": "Mon–Sat, 8:00 AM – 6:00 PM",
+    "surfaceMultiplier": 1.5,
+    "perimeterMultiplier": 2,
+    "lowStockThreshold": 10
+  },
+  "products": {
+    "p1": {
+      "name": "Clear Float Glass 5mm",
+      "category": "Glass",
+      "description": "Standard clear float glass, ideal for windows and table tops.",
+      "basePrice": 320,
+      "stockQty": 48,
+      "lowStockThreshold": 10,
+      "images": ["/assets/images/product/product-1.webp"],
+      "keywords": ["glass", "window", "clear", "sheet"],
+      "visibleInShop": true,
+      "availableForReservation": true
+    },
+    "p3": {
+      "name": "Aluminum Sliding Profile",
+      "category": "Aluminum Profiles",
+      "description": "Powder-coated sliding track profile for windows and doors.",
+      "basePrice": 250,
+      "stockQty": 120,
+      "lowStockThreshold": 20,
+      "images": ["/assets/images/product/product-3.webp"],
+      "keywords": ["aluminum", "profile", "frame", "metal", "track"],
+      "visibleInShop": true,
+      "availableForReservation": true
+    }
+  },
+  "promoList": {
+    "b1": {
+      "image": "/assets/images/cover/cover-1.webp",
+      "caption": "Rainy season sale — 10% off all window screens",
+      "link": "Screens",
+      "status": "active",
+      "order": 1
+    }
+  },
+  "recommendations": {
+    "p1": ["p5", "p3"]
+  }
+}
