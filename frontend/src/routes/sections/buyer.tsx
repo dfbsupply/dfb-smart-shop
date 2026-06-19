@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
+import { RequireAuth } from 'src/auth';
 import { BuyerLayout } from 'src/layouts/buyer';
 
 import { renderFallback } from './shared';
@@ -22,11 +23,13 @@ const NotificationsPage = lazy(() => import('src/pages/buyer/notifications'));
 export const buyerRoutes: RouteObject[] = [
   {
     element: (
-      <BuyerLayout>
-        <Suspense fallback={renderFallback()}>
-          <Outlet />
-        </Suspense>
-      </BuyerLayout>
+      <RequireAuth>
+        <BuyerLayout>
+          <Suspense fallback={renderFallback()}>
+            <Outlet />
+          </Suspense>
+        </BuyerLayout>
+      </RequireAuth>
     ),
     children: [
       { path: 'buyer', element: <HomePage /> },

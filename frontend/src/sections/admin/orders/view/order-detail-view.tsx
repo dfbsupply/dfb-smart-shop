@@ -1,6 +1,6 @@
 import type { OrderStatus } from 'src/data/types';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -21,13 +21,16 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import TableContainer from '@mui/material/TableContainer';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDateTime } from 'src/utils/format-time';
 
-import { ORDERS } from 'src/data/mock';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { fetchOrder, updateOrder } from 'src/services/db';
 import { fPeso, computeUnitPrice } from 'src/data/pricing';
 import {
   ORDER_STATUS_LABEL,
@@ -49,14 +52,31 @@ export function OrderDetailView() {
   const { id } = useParams();
   const { showToast, toast } = useToast();
 
-  const order = ORDERS.find((o) => o.id === id);
-
-  const [status, setStatus] = useState<OrderStatus>(order?.status ?? 'pending');
-  const [confirmedAmount, setConfirmedAmount] = useState(
-    order?.confirmedAmount != null ? String(order.confirmedAmount) : ''
+  const { data: order, loading, refetch } = useAsync(
+    () => (id ? fetchOrder(id) : Promise.resolve(null)),
+    [id]
   );
-  const [staffNote, setStaffNote] = useState(order?.staffNote ?? '');
+
+  const [status, setStatus] = useState<OrderStatus>('pending');
+  const [confirmedAmount, setConfirmedAmount] = useState('');
+  const [staffNote, setStaffNote] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!order) return;
+    setStatus(order.status);
+    setConfirmedAmount(order.confirmedAmount != null ? String(order.confirmedAmount) : '');
+    setStaffNote(order.staffNote ?? '');
+  }, [order]);
+
+  if (loading) {
+    return (
+      <DashboardContent>
+        <LinearProgress sx={{ mt: 2 }} />
+      </DashboardContent>
+    );
+  }
 
   if (!order) {
     return (
@@ -71,17 +91,47 @@ export function OrderDetailView() {
     );
   }
 
-  const handleUpdateStatus = () => {
-    showToast('Order updated. Customer will see the new status.');
+  const handleUpdateStatus = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await updateOrder(id, { status });
+      showToast('Order updated. Customer will see the new status.');
+      refetch();
+    } catch {
+      showToast('Could not update order.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSave = () => {
-    showToast('Changes saved.');
+  const handleSave = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      await updateOrder(id, {
+        confirmedAmount: confirmedAmount === '' ? null : Number(confirmedAmount),
+        staffNote: staffNote.trim() || null,
+      });
+      showToast('Changes saved.');
+      refetch();
+    } catch {
+      showToast('Could not save changes.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleCancelOrder = () => {
-    setStatus('cancelled');
-    showToast('Order cancelled.', 'warning');
+  const handleCancelOrder = async () => {
+    if (!id) return;
+    try {
+      await updateOrder(id, { status: 'cancelled' });
+      setStatus('cancelled');
+      showToast('Order cancelled.', 'warning');
+      refetch();
+    } catch {
+      showToast('Could not cancel order.', 'error');
+    }
   };
 
   return (
@@ -299,7 +349,13 @@ export function OrderDetailView() {
                 </MenuItem>
               ))}
             </Select>
-            <Button fullWidth variant="contained" color="inherit" onClick={handleUpdateStatus}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="inherit"
+              onClick={handleUpdateStatus}
+              loading={saving}
+            >
               Update Status
             </Button>
 
@@ -317,7 +373,7 @@ export function OrderDetailView() {
 
           <Card sx={{ p: 3 }}>
             <Stack spacing={1.5}>
-              <Button variant="contained" onClick={handleSave}>
+              <Button variant="contained" onClick={handleSave} loading={saving}>
                 Save Changes
               </Button>
               <Button

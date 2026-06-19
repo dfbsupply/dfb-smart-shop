@@ -10,13 +10,16 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
 import Typography from '@mui/material/Typography';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDateTime } from 'src/utils/format-time';
 
-import { getBuyerOrders } from 'src/data/mock';
+import { fetchOrder, cancelOrder } from 'src/services/db';
 import { fPeso, computeUnitPrice } from 'src/data/pricing';
 
 import { useToast } from 'src/components/toast';
@@ -38,7 +41,10 @@ export function BuyerOrderDetailView() {
   const { addItem } = useCart();
   const { showToast, toast } = useToast();
 
-  const order = getBuyerOrders().find((o) => o.id === id);
+  const { data: order, loading } = useAsync(
+    () => (id ? fetchOrder(id) : Promise.resolve(null)),
+    [id]
+  );
 
   const handleReorder = () => {
     order?.items.forEach((item) =>
@@ -59,6 +65,10 @@ export function BuyerOrderDetailView() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  if (loading) {
+    return <LinearProgress sx={{ mt: 2 }} />;
+  }
+
   if (!order) {
     return (
       <Box>
@@ -73,7 +83,7 @@ export function BuyerOrderDetailView() {
   }
 
   const isReservation = order.type === 'reservation';
-  const canCancel = order.status === 'pending';
+  const canCancel = order.status === 'new' || order.status === 'pending';
 
   return (
     <Box>
@@ -248,9 +258,15 @@ export function BuyerOrderDetailView() {
         confirmLabel="Yes, cancel"
         cancelLabel="Keep order"
         onClose={() => setConfirmCancel(false)}
-        onConfirm={() => {
-          showToast('Order cancelled.', 'warning');
-          setTimeout(() => router.push('/buyer/orders'), 600);
+        onConfirm={async () => {
+          if (!order) return;
+          try {
+            await cancelOrder(order.id);
+            showToast('Order cancelled.', 'warning');
+            setTimeout(() => router.push('/buyer/orders'), 600);
+          } catch {
+            showToast('Could not cancel this order.', 'error');
+          }
         }}
       />
 

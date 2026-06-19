@@ -3,7 +3,7 @@ import type { Prediction } from 'src/services/ai';
 
 import { useState, useCallback } from 'react';
 
-import { PRODUCTS } from 'src/data/mock';
+import { fetchVisibleProducts } from 'src/services/db';
 import { classifyImage, matchProductsByLabels } from 'src/services/ai';
 
 // ----------------------------------------------------------------------
@@ -40,7 +40,8 @@ export function useImageSearch() {
         return;
       }
 
-      const matched = matchProductsByLabels(predictions, PRODUCTS).filter((p) => p.visibleInShop);
+      const products = await fetchVisibleProducts();
+      const matched = matchProductsByLabels(predictions, products);
       setTopLabel(best.label);
 
       if (matched.length === 0) {

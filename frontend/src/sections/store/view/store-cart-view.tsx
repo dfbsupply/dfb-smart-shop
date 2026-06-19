@@ -11,8 +11,10 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fPeso } from 'src/data/pricing';
-import { PRODUCTS, RECOMMENDATIONS } from 'src/data/mock';
+import { fetchVisibleProducts, fetchRecommendations } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -26,16 +28,22 @@ import { StoreProductCard } from '../product-card';
 export function StoreCartView() {
   const { items, subtotal, updateQty, removeItem } = useCart();
 
+  const { data } = useAsync(async () => {
+    const [products, recs] = await Promise.all([fetchVisibleProducts(), fetchRecommendations()]);
+    return { products, recs };
+  }, []);
+
   const recommendations = useMemo(() => {
+    if (!data) return [];
     const inCart = new Set(items.map((i) => i.productId));
     const addonIds = new Set<string>();
     items.forEach((item) => {
-      RECOMMENDATIONS.find((r) => r.productId === item.productId)?.addonIds.forEach((id) => {
+      data.recs.find((r) => r.productId === item.productId)?.addonIds.forEach((id) => {
         if (!inCart.has(id)) addonIds.add(id);
       });
     });
-    return PRODUCTS.filter((p) => addonIds.has(p.id)).slice(0, 4);
-  }, [items]);
+    return data.products.filter((p) => addonIds.has(p.id)).slice(0, 4);
+  }, [items, data]);
 
   if (items.length === 0) {
     return (

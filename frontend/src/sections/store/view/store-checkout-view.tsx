@@ -17,7 +17,8 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { fPeso } from 'src/data/pricing';
-import { addOrder, generateOrderCode } from 'src/data/mock';
+import { placeOrder } from 'src/services/db';
+import { sendOrderEmail } from 'src/services/email';
 
 import { useCart } from '../cart-context';
 import { saveLastOrder } from '../last-order';
@@ -41,6 +42,7 @@ export function StoreCheckoutView() {
     notes: '',
   });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const set = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,7 +65,7 @@ export function StoreCheckoutView() {
     );
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.fullName.trim() || !form.mobile.trim()) {
       setError('Please enter your name and mobile number.');
       return;
@@ -77,58 +79,77 @@ export function StoreCheckoutView() {
       return;
     }
     setError('');
+    setSubmitting(true);
 
-    const code = generateOrderCode();
     const fromVisualSearch = items.some((i) => i.source === 'visual_search');
 
-    // Write the order so the admin can retrieve it (stand-in for Firebase).
-    addOrder({
-      id: `o${Date.now()}`,
-      code,
-      customerName: form.fullName.trim(),
-      customerMobile: form.mobile.trim(),
-      customerEmail: form.email.trim(),
-      type: 'order',
-      fulfilment: form.fulfilment,
-      address: form.fulfilment === 'delivery' ? form.address.trim() : undefined,
-      notes: form.notes.trim() || undefined,
-      status: 'new',
-      source: fromVisualSearch ? 'visual_search' : 'manual',
-      createdAt: new Date().toISOString(),
-      estTotal: subtotal,
-      items: items.map((i) => ({
-        productId: i.productId,
-        name: i.name,
-        image: i.image,
-        width: i.width,
-        height: i.height,
-        qty: i.qty,
-        basePrice: i.basePrice,
-        unitPrice: i.unitPrice,
-        lineTotal: Math.round(i.unitPrice * i.qty * 100) / 100,
-        source: i.source,
-        referencePhoto: i.referencePhoto,
-      })),
-    });
+    try {
+      // Write a real order to Supabase (guest order via the place_order RPC).
+      const { code } = await placeOrder({
+        customerName: form.fullName.trim(),
+        customerMobile: form.mobile.trim(),
+        customerEmail: form.email.trim() || undefined,
+        fulfilment: form.fulfilment,
+        address: form.fulfilment === 'delivery' ? form.address.trim() : undefined,
+        notes: form.notes.trim() || undefined,
+        source: fromVisualSearch ? 'visual_search' : 'manual',
+        estTotal: subtotal,
+        items: items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          image: i.image,
+          width: i.width,
+          height: i.height,
+          qty: i.qty,
+          basePrice: i.basePrice,
+          unitPrice: i.unitPrice,
+          lineTotal: Math.round(i.unitPrice * i.qty * 100) / 100,
+          source: i.source,
+          referencePhoto: i.referencePhoto,
+        })),
+      });
 
-    // Keep a copy for the confirmation page recap.
-    saveLastOrder({
-      code,
-      customerName: form.fullName.trim(),
-      customerMobile: form.mobile.trim(),
-      fulfilment: form.fulfilment,
-      items: items.map((i) => ({
-        name: i.name,
-        image: i.image,
-        width: i.width,
-        height: i.height,
-        qty: i.qty,
-        unitPrice: i.unitPrice,
-      })),
-      estTotal: subtotal,
-    });
-    clear();
-    router.push('/order-confirmed');
+      // Notify the shop by email (best-effort; never blocks the order).
+      void sendOrderEmail({
+        code,
+        customerName: form.fullName.trim(),
+        customerMobile: form.mobile.trim(),
+        customerEmail: form.email.trim() || undefined,
+        fulfilment: form.fulfilment,
+        address: form.fulfilment === 'delivery' ? form.address.trim() : undefined,
+        notes: form.notes.trim() || undefined,
+        estTotal: subtotal,
+        items: items.map((i) => ({
+          name: i.name,
+          width: i.width,
+          height: i.height,
+          qty: i.qty,
+          unitPrice: i.unitPrice,
+        })),
+      });
+
+      // Keep a copy for the confirmation page recap.
+      saveLastOrder({
+        code,
+        customerName: form.fullName.trim(),
+        customerMobile: form.mobile.trim(),
+        fulfilment: form.fulfilment,
+        items: items.map((i) => ({
+          name: i.name,
+          image: i.image,
+          width: i.width,
+          height: i.height,
+          qty: i.qty,
+          unitPrice: i.unitPrice,
+        })),
+        estTotal: subtotal,
+      });
+      clear();
+      router.push('/order-confirmed');
+    } catch {
+      setSubmitting(false);
+      setError('Could not place your order. Please try again.');
+    }
   };
 
   return (
@@ -242,7 +263,14 @@ export function StoreCheckoutView() {
               This total is an estimate. The shop confirms the final amount.
             </Typography>
 
-            <Button fullWidth size="large" variant="contained" onClick={handleSubmit} sx={{ mt: 3 }}>
+            <Button
+              fullWidth
+              size="large"
+              variant="contained"
+              onClick={handleSubmit}
+              loading={submitting}
+              sx={{ mt: 3 }}
+            >
               Submit Order
             </Button>
             <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 1.5 }}>

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { usePathname } from 'src/routes/hooks';
 
+import { AuthProvider } from 'src/auth';
 import { ThemeProvider } from 'src/theme/theme-provider';
 
 import { CartProvider } from 'src/sections/store/cart-context';
@@ -20,7 +21,9 @@ export default function App({ children }: AppProps) {
 
   return (
     <ThemeProvider>
-      <CartProvider>{children}</CartProvider>
+      <AuthProvider>
+        <CartProvider>{children}</CartProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

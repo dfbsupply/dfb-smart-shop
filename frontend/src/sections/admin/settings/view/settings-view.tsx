@@ -1,6 +1,6 @@
 import type { StaffAccount } from 'src/data/types';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -15,7 +15,9 @@ import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { SHOP_SETTINGS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
+import { fetchSettings } from 'src/services/db';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Label } from 'src/components/label';
@@ -29,20 +31,29 @@ import { Iconify } from 'src/components/iconify';
 export function SettingsView() {
   const { showToast, toast } = useToast();
 
-  const [profile, setProfile] = useState({
-    name: SHOP_SETTINGS.name,
-    address: SHOP_SETTINGS.address,
-    contact: SHOP_SETTINGS.contact,
-    hours: SHOP_SETTINGS.hours,
-  });
-  const [surfaceMultiplier, setSurfaceMultiplier] = useState(String(SHOP_SETTINGS.surfaceMultiplier));
-  const [perimeterMultiplier, setPerimeterMultiplier] = useState(
-    String(SHOP_SETTINGS.perimeterMultiplier)
-  );
-  const [lowStockThreshold, setLowStockThreshold] = useState(String(SHOP_SETTINGS.lowStockThreshold));
-  const [staff, setStaff] = useState<StaffAccount[]>(SHOP_SETTINGS.staff);
+  const { data: settings } = useAsync(fetchSettings, []);
+
+  const [profile, setProfile] = useState({ name: '', address: '', contact: '', hours: '' });
+  const [surfaceMultiplier, setSurfaceMultiplier] = useState('1.5');
+  const [perimeterMultiplier, setPerimeterMultiplier] = useState('2');
+  const [lowStockThreshold, setLowStockThreshold] = useState('10');
+  const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
+
+  useEffect(() => {
+    if (!settings) return;
+    setProfile({
+      name: settings.name,
+      address: settings.address,
+      contact: settings.contact,
+      hours: settings.hours,
+    });
+    setSurfaceMultiplier(String(settings.surfaceMultiplier));
+    setPerimeterMultiplier(String(settings.perimeterMultiplier));
+    setLowStockThreshold(String(settings.lowStockThreshold));
+    setStaff(settings.staff);
+  }, [settings]);
 
   const addStaff = () => {
     if (!newStaffName.trim() || !newStaffEmail.trim()) return;

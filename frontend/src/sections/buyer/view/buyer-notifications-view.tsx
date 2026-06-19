@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import type { BuyerNotification } from 'src/services/db';
+
+import { useState, useEffect } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -6,9 +8,12 @@ import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDateTime } from 'src/utils/format-time';
 
-import { BUYER_NOTIFICATIONS } from 'src/data/mock';
+import { useAuth } from 'src/auth';
+import { fetchMyNotifications, markAllNotificationsRead } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -17,9 +22,28 @@ import { Iconify } from 'src/components/iconify';
 // ----------------------------------------------------------------------
 
 export function BuyerNotificationsView() {
-  const [items, setItems] = useState(BUYER_NOTIFICATIONS);
+  const { user } = useAuth();
+  const { data } = useAsync(
+    () => (user ? fetchMyNotifications(user.id) : Promise.resolve([])),
+    [user?.id]
+  );
+
+  const [items, setItems] = useState<BuyerNotification[]>([]);
+  useEffect(() => {
+    if (data) setItems(data);
+  }, [data]);
 
   const hasUnread = items.some((n) => !n.read);
+
+  const handleMarkAll = async () => {
+    if (!user) return;
+    setItems((prev) => prev.map((n) => ({ ...n, read: true }))); // optimistic
+    try {
+      await markAllNotificationsRead(user.id);
+    } catch {
+      /* keep optimistic state; will reconcile on next load */
+    }
+  };
 
   return (
     <Box>
@@ -28,11 +52,7 @@ export function BuyerNotificationsView() {
           Notifications
         </Typography>
         {hasUnread && (
-          <Button
-            size="small"
-            color="inherit"
-            onClick={() => setItems((prev) => prev.map((n) => ({ ...n, read: true })))}
-          >
+          <Button size="small" color="inherit" onClick={handleMarkAll}>
             Mark all read
           </Button>
         )}

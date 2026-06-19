@@ -13,11 +13,14 @@ import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import Checkbox from '@mui/material/Checkbox';
 import Typography from '@mui/material/Typography';
+import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { PRODUCTS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
 import { getStockStatus } from 'src/data/status';
 import { PRODUCT_CATEGORIES } from 'src/data/types';
+import { fetchVisibleProducts } from 'src/services/db';
 
 import { StoreProductCard } from '../product-card';
 
@@ -30,6 +33,9 @@ type SortKey = 'newest' | 'price_asc' | 'price_desc' | 'name';
 export function StoreCatalogView() {
   const [searchParams] = useSearchParams();
   const query = (searchParams.get('q') ?? '').trim().toLowerCase();
+
+  const { data, loading } = useAsync(fetchVisibleProducts, []);
+  const allProducts = useMemo(() => data ?? [], [data]);
 
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -47,7 +53,7 @@ export function StoreCatalogView() {
   };
 
   const products = useMemo(() => {
-    let list = PRODUCTS.filter((p) => p.visibleInShop);
+    let list = allProducts;
     if (query)
       list = list.filter(
         (p) =>
@@ -56,6 +62,7 @@ export function StoreCatalogView() {
     if (categories.length) list = list.filter((p) => categories.includes(p.category));
     if (inStockOnly) list = list.filter((p) => getStockStatus(p) !== 'out_of_stock');
 
+    list = [...list];
     switch (sort) {
       case 'price_asc':
         return [...list].sort((a, b) => a.basePrice - b.basePrice);
@@ -66,7 +73,7 @@ export function StoreCatalogView() {
       default:
         return list;
     }
-  }, [query, categories, inStockOnly, sort]);
+  }, [allProducts, query, categories, inStockOnly, sort]);
 
   return (
     <Box>
@@ -133,7 +140,11 @@ export function StoreCatalogView() {
 
         {/* Product grid */}
         <Grid size={{ xs: 12, md: 9 }}>
-          {products.length === 0 ? (
+          {loading ? (
+            <Card sx={{ p: 8 }}>
+              <LinearProgress sx={{ maxWidth: 320, mx: 'auto' }} />
+            </Card>
+          ) : products.length === 0 ? (
             <Card sx={{ p: 8, textAlign: 'center' }}>
               <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2 }}>
                 No products match your filters.

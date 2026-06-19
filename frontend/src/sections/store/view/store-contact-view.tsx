@@ -8,7 +8,9 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { SHOP_SETTINGS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
+import { fetchSettings } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -19,6 +21,7 @@ import { Iconify } from 'src/components/iconify';
 
 export function StoreContactView() {
   const { showToast, toast } = useToast();
+  const { data: settings } = useAsync(fetchSettings, []);
   const [form, setForm] = useState({ name: '', contact: '', message: '' });
 
   const set = (key: keyof typeof form, value: string) =>
@@ -33,9 +36,9 @@ export function StoreContactView() {
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack spacing={2.5}>
-            <InfoRow icon="solar:map-point-bold" label="Address" value={SHOP_SETTINGS.address} />
-            <InfoRow icon="solar:clock-circle-bold" label="Store Hours" value={SHOP_SETTINGS.hours} />
-            <InfoRow icon="solar:phone-bold" label="Phone" value={SHOP_SETTINGS.contact} />
+            <InfoRow icon="solar:map-point-bold" label="Address" value={settings?.address ?? ''} />
+            <InfoRow icon="solar:clock-circle-bold" label="Store Hours" value={settings?.hours ?? ''} />
+            <InfoRow icon="solar:phone-bold" label="Phone" value={settings?.contact ?? ''} />
             <InfoRow icon="solar:letter-bold" label="Email" value="hello@dfbsmartshop.com" />
           </Stack>
         </Grid>

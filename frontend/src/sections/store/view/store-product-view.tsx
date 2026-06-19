@@ -11,12 +11,15 @@ import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import { RouterLink } from 'src/routes/components';
 
-import { PRODUCTS, RECOMMENDATIONS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
 import { fPeso, computeUnitPrice, type PriceBreakdown } from 'src/data/pricing';
 import { getStockStatus, STOCK_STATUS_LABEL, STOCK_STATUS_COLOR } from 'src/data/status';
+import { fetchProduct, fetchVisibleProducts, fetchRecommendations } from 'src/services/db';
 
 import { Label } from 'src/components/label';
 import { useToast } from 'src/components/toast';
@@ -35,7 +38,16 @@ export function StoreProductView() {
   const { addItem } = useCart();
   const { showToast, toast } = useToast();
 
-  const product = PRODUCTS.find((p) => p.id === id);
+  const { data, loading } = useAsync(async () => {
+    if (!id) return null;
+    const [product, products, recs] = await Promise.all([
+      fetchProduct(id),
+      fetchVisibleProducts(),
+      fetchRecommendations(),
+    ]);
+    return { product, products, recs };
+  }, [id]);
+  const product = data?.product ?? null;
 
   // If the customer arrived from Visual Search for this product, keep the photo
   // so it can be attached to the cart line (and later shown to the admin).
@@ -49,6 +61,10 @@ export function StoreProductView() {
   const [error, setError] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [result, setResult] = useState<PriceBreakdown | null>(null);
+
+  if (loading) {
+    return <LinearProgress sx={{ mt: 2 }} />;
+  }
 
   if (!product) {
     return (
@@ -66,8 +82,8 @@ export function StoreProductView() {
   const stock = getStockStatus(product);
   const quantity = Math.max(1, Number(qty) || 1);
 
-  const recommended = (RECOMMENDATIONS.find((r) => r.productId === product.id)?.addonIds ?? [])
-    .map((addonId) => PRODUCTS.find((p) => p.id === addonId))
+  const recommended = (data?.recs.find((r) => r.productId === product.id)?.addonIds ?? [])
+    .map((addonId) => data?.products.find((p) => p.id === addonId))
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   const handleCalculate = () => {

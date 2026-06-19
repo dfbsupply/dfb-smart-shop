@@ -1,6 +1,6 @@
 import type { ProductCategory } from 'src/data/types';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -15,14 +15,17 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
+import LinearProgress from '@mui/material/LinearProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { PRODUCTS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
 import { PRODUCT_CATEGORIES } from 'src/data/types';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { fetchProduct, createProduct, updateProduct } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -62,26 +65,31 @@ export function ProductFormView() {
   const router = useRouter();
   const { showToast, toast } = useToast();
 
-  const existing = id ? PRODUCTS.find((p) => p.id === id) : undefined;
-  const isEdit = !!existing;
-
-  const [form, setForm] = useState<FormState>(
-    existing
-      ? {
-          name: existing.name,
-          category: existing.category,
-          description: existing.description,
-          basePrice: String(existing.basePrice),
-          stockQty: String(existing.stockQty),
-          lowStockThreshold: String(existing.lowStockThreshold),
-          keywords: existing.keywords,
-          images: existing.images,
-          visibleInShop: existing.visibleInShop,
-          availableForReservation: existing.availableForReservation,
-        }
-      : EMPTY
+  const isEdit = !!id;
+  const { data: existing, loading } = useAsync(
+    () => (id ? fetchProduct(id) : Promise.resolve(null)),
+    [id]
   );
+
+  const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!existing) return;
+    setForm({
+      name: existing.name,
+      category: existing.category,
+      description: existing.description,
+      basePrice: String(existing.basePrice),
+      stockQty: String(existing.stockQty),
+      lowStockThreshold: String(existing.lowStockThreshold),
+      keywords: existing.keywords,
+      images: existing.images,
+      visibleInShop: existing.visibleInShop,
+      availableForReservation: existing.availableForReservation,
+    });
+  }, [existing]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -96,11 +104,48 @@ export function ProductFormView() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    showToast('Product saved.');
-    setTimeout(() => router.push('/admin/inventory'), 600);
+    if (saving) return;
+    setSaving(true);
+    const input = {
+      name: form.name.trim(),
+      category: form.category,
+      description: form.description,
+      basePrice: Number(form.basePrice),
+      stockQty: Number(form.stockQty || 0),
+      lowStockThreshold: Number(form.lowStockThreshold || 0),
+      images: form.images,
+      keywords: form.keywords,
+      visibleInShop: form.visibleInShop,
+      availableForReservation: form.availableForReservation,
+    };
+    try {
+      if (isEdit && id) {
+        await updateProduct(id, input);
+      } else {
+        await createProduct(input);
+      }
+      showToast('Product saved.');
+      setTimeout(() => router.push('/admin/inventory'), 600);
+    } catch {
+      setSaving(false);
+      showToast('Could not save product.', 'error');
+    }
   };
+
+  if (isEdit && !loading && !existing) {
+    return (
+      <DashboardContent>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Product not found
+        </Typography>
+        <Button component={RouterLink} href="/admin/inventory" color="inherit">
+          Back to Inventory
+        </Button>
+      </DashboardContent>
+    );
+  }
 
   return (
     <DashboardContent>
@@ -115,6 +160,7 @@ export function ProductFormView() {
           Inventory
         </Button>
         <Typography variant="h4">{isEdit ? 'Edit Product' : 'Add Product'}</Typography>
+        {isEdit && loading && <LinearProgress sx={{ mt: 2 }} />}
       </Box>
 
       <Grid container spacing={3}>
@@ -284,7 +330,7 @@ export function ProductFormView() {
             <Divider sx={{ borderStyle: 'dashed', mb: 2 }} />
 
             <Stack spacing={1.5}>
-              <Button variant="contained" size="large" onClick={handleSave}>
+              <Button variant="contained" size="large" onClick={handleSave} loading={saving}>
                 Save Product
               </Button>
               <Button component={RouterLink} href="/admin/inventory" variant="outlined" color="inherit">

@@ -9,10 +9,13 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDate } from 'src/utils/format-time';
 
+import { useAuth } from 'src/auth';
 import { fPeso } from 'src/data/pricing';
-import { getBuyerOrders } from 'src/data/mock';
+import { fetchMyOrders } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -33,8 +36,14 @@ const TABS: { value: FilterTab; label: string }[] = [
 ];
 
 export function BuyerOrdersView() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<FilterTab>('all');
-  const orders = useMemo(() => getBuyerOrders(), []);
+
+  const { data } = useAsync(
+    () => (user ? fetchMyOrders(user.id) : Promise.resolve([])),
+    [user?.id]
+  );
+  const orders = useMemo(() => data ?? [], [data]);
 
   const filtered = useMemo(
     () =>

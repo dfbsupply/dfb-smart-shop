@@ -1,6 +1,6 @@
 import type { Product } from 'src/data/types';
 
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -17,8 +17,10 @@ import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
 import TableContainer from '@mui/material/TableContainer';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { DashboardContent } from 'src/layouts/dashboard';
-import { PRODUCTS, RECOMMENDATIONS } from 'src/data/mock';
+import { fetchProducts, fetchRecommendations } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -30,16 +32,30 @@ import { Scrollbar } from 'src/components/scrollbar';
 export function RecommendationsView() {
   const { showToast, toast } = useToast();
 
-  const initial: Record<string, string[]> = Object.fromEntries(
-    PRODUCTS.map((p) => [
-      p.id,
-      RECOMMENDATIONS.find((r) => r.productId === p.id)?.addonIds ?? [],
-    ])
-  );
+  const { data } = useAsync(async () => {
+    const [products, recommendations] = await Promise.all([
+      fetchProducts(),
+      fetchRecommendations(),
+    ]);
+    return { products, recommendations };
+  }, []);
 
-  const [pairings, setPairings] = useState<Record<string, string[]>>(initial);
+  const products = useMemo(() => data?.products ?? [], [data]);
 
-  const productById = (id: string) => PRODUCTS.find((p) => p.id === id)!;
+  const [pairings, setPairings] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (!data) return;
+    setPairings(
+      Object.fromEntries(
+        data.products.map((p) => [
+          p.id,
+          data.recommendations.find((r) => r.productId === p.id)?.addonIds ?? [],
+        ])
+      )
+    );
+  }, [data]);
+
+  const productById = (id: string) => products.find((p) => p.id === id);
 
   const handleSave = () => showToast('Pairings saved.');
 
@@ -74,9 +90,11 @@ export function RecommendationsView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {PRODUCTS.map((product) => {
-                  const selected = pairings[product.id].map(productById);
-                  const options = PRODUCTS.filter((p) => p.id !== product.id);
+                {products.map((product) => {
+                  const selected = (pairings[product.id] ?? [])
+                    .map(productById)
+                    .filter(Boolean) as Product[];
+                  const options = products.filter((p) => p.id !== product.id);
                   return (
                     <TableRow key={product.id}>
                       <TableCell>

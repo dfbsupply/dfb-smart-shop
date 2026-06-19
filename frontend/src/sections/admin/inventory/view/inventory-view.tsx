@@ -1,11 +1,12 @@
 import type { SelectChangeEvent } from '@mui/material/Select';
-import type { Product, StockStatus, ProductCategory } from 'src/data/types';
+import type { StockStatus, ProductCategory } from 'src/data/types';
 
 import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -17,13 +18,16 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import TableContainer from '@mui/material/TableContainer';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import { RouterLink } from 'src/routes/components';
 
-import { PRODUCTS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
 import { getStockStatus } from 'src/data/status';
 import { PRODUCT_CATEGORIES } from 'src/data/types';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { fetchProducts, deleteProduct, setProductVisibility } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -39,25 +43,38 @@ import { ProductTableRow } from '../product-table-row';
 export function InventoryView() {
   const { showToast, toast } = useToast();
 
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const { data, loading, error, refetch } = useAsync(fetchProducts, []);
+  const products = useMemo(() => data ?? [], [data]);
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [stock, setStock] = useState<StockStatus | 'all'>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleToggleVisible = useCallback(
-    (id: string) => {
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, visibleInShop: !p.visibleInShop } : p))
-      );
+    async (id: string) => {
+      const product = products.find((p) => p.id === id);
+      if (!product) return;
+      try {
+        await setProductVisibility(id, !product.visibleInShop);
+        refetch();
+      } catch {
+        showToast('Could not update visibility.', 'error');
+      }
     },
-    []
+    [products, refetch, showToast]
   );
 
-  const handleConfirmDelete = useCallback(() => {
-    setProducts((prev) => prev.filter((p) => p.id !== deleteId));
-    showToast('Product deleted.', 'warning');
-  }, [deleteId, showToast]);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteId) return;
+    try {
+      await deleteProduct(deleteId);
+      showToast('Product deleted.', 'warning');
+      refetch();
+    } catch {
+      showToast('Could not delete product.', 'error');
+    }
+  }, [deleteId, refetch, showToast]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -137,6 +154,13 @@ export function InventoryView() {
           </Select>
         </Box>
 
+        {error && (
+          <Alert severity="error" sx={{ mx: 2.5, mb: 2 }}>
+            Couldn&apos;t load products: {error}
+          </Alert>
+        )}
+        {loading && <LinearProgress />}
+
         <Scrollbar>
           <TableContainer sx={{ overflow: 'unset' }}>
             <Table sx={{ minWidth: 820 }}>
@@ -161,7 +185,7 @@ export function InventoryView() {
                   />
                 ))}
 
-                {filtered.length === 0 && (
+                {!loading && filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>

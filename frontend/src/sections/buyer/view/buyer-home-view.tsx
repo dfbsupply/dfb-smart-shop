@@ -9,10 +9,13 @@ import IconButton from '@mui/material/IconButton';
 
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDate } from 'src/utils/format-time';
 
+import { useAuth } from 'src/auth';
 import { fPeso } from 'src/data/pricing';
-import { CURRENT_BUYER, getBuyerOrders, BUYER_NOTIFICATIONS } from 'src/data/mock';
+import { fetchMyOrders, fetchMyNotifications } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
 import { OfflineNotice } from 'src/components/offline-notice';
@@ -24,8 +27,20 @@ import { BuyerStatusBadge } from '../buyer-status-badge';
 // ----------------------------------------------------------------------
 
 export function BuyerHomeView() {
-  const orders = useMemo(() => getBuyerOrders(), []);
-  const unread = BUYER_NOTIFICATIONS.filter((n) => !n.read).length;
+  const { user, profile } = useAuth();
+  const firstName = profile?.full_name?.trim().split(' ')[0] || 'there';
+
+  const { data } = useAsync(async () => {
+    if (!user) return { orders: [], unread: 0 };
+    const [orders, notifs] = await Promise.all([
+      fetchMyOrders(user.id),
+      fetchMyNotifications(user.id),
+    ]);
+    return { orders, unread: notifs.filter((n) => !n.read).length };
+  }, [user?.id]);
+
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const unread = data?.unread ?? 0;
 
   const stats = useMemo(() => {
     const active = orders.filter(
@@ -48,7 +63,7 @@ export function BuyerHomeView() {
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Hi,
           </Typography>
-          <Typography variant="h5">{CURRENT_BUYER.firstName} 👋</Typography>
+          <Typography variant="h5">{firstName} 👋</Typography>
         </Box>
         <IconButton component={RouterLink} href="/cart">
           <Iconify icon="solar:cart-large-2-bold-duotone" width={26} />

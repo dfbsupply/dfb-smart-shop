@@ -10,7 +10,9 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
-import { BANNERS, PRODUCTS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
+import { fetchActivePromos, fetchVisibleProducts } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -48,8 +50,13 @@ const QUICK_ACTIONS = [
 ];
 
 export function StoreHomeView() {
-  const activeBanner = useMemo(() => BANNERS.find((b) => b.status === 'active'), []);
-  const featured = useMemo(() => PRODUCTS.filter((p) => p.visibleInShop).slice(0, 4), []);
+  const { data } = useAsync(async () => {
+    const [promos, products] = await Promise.all([fetchActivePromos(), fetchVisibleProducts()]);
+    return { activeBanner: promos[0], featured: products.slice(0, 4) };
+  }, []);
+
+  const activeBanner = data?.activeBanner;
+  const featured = useMemo(() => data?.featured ?? [], [data]);
 
   return (
     <Box>

@@ -1,6 +1,6 @@
 import type { Banner, BannerStatus } from 'src/data/types';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -17,7 +17,9 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { BANNERS } from 'src/data/mock';
+import { useAsync } from 'src/hooks/use-async';
+
+import { fetchPromos } from 'src/services/db';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Label } from 'src/components/label';
@@ -44,7 +46,12 @@ const STATUS_LABEL: Record<BannerStatus, string> = {
 export function PromosView() {
   const { showToast, toast } = useToast();
 
-  const [banners, setBanners] = useState<Banner[]>(BANNERS);
+  const { data: loadedBanners } = useAsync(fetchPromos, []);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  useEffect(() => {
+    if (loadedBanners) setBanners(loadedBanners);
+  }, [loadedBanners]);
+
   const [editing, setEditing] = useState<Banner | null>(null);
   const [openForm, setOpenForm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);

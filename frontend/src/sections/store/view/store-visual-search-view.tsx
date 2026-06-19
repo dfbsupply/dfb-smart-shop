@@ -15,9 +15,9 @@ import LinearProgress from '@mui/material/LinearProgress';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { PRODUCTS } from 'src/data/mock';
 import { fPeso } from 'src/data/pricing';
 import { getStockStatus } from 'src/data/status';
+import { fetchVisibleProducts } from 'src/services/db';
 import { classifyImage, matchProductsByLabels } from 'src/services/ai';
 
 import { Iconify } from 'src/components/iconify';
@@ -83,9 +83,8 @@ export function StoreVisualSearchView() {
         return;
       }
       // Match against available (visible + not out-of-stock) materials.
-      const available = PRODUCTS.filter(
-        (p) => p.visibleInShop && getStockStatus(p) !== 'out_of_stock'
-      );
+      const products = await fetchVisibleProducts();
+      const available = products.filter((p) => getStockStatus(p) !== 'out_of_stock');
       const matched = matchProductsByLabels(predictions, available);
       setTopLabel(best.label);
       if (matched.length === 0) {

@@ -1,3 +1,5 @@
+import type { Order, Product } from 'src/data/types';
+
 import { useState } from 'react';
 
 import Box from '@mui/material/Box';
@@ -15,9 +17,11 @@ import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fPeso } from 'src/data/pricing';
-import { ORDERS, PRODUCTS } from 'src/data/mock';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { fetchOrders, fetchProducts } from 'src/services/db';
 import { getStockStatus, ORDER_STATUS_LABEL } from 'src/data/status';
 
 import { Iconify } from 'src/components/iconify';
@@ -44,15 +48,15 @@ const REPORT_OPTIONS: { value: ReportType; label: string }[] = [
 
 type ReportTable = { columns: string[]; rows: (string | number)[][] };
 
-function buildReport(type: ReportType): ReportTable {
+function buildReport(type: ReportType, orders: Order[], products: Product[]): ReportTable {
   switch (type) {
     case 'sales': {
-      const confirmed = ORDERS.reduce((sum, o) => sum + (o.confirmedAmount ?? 0), 0);
-      const estimated = ORDERS.reduce((sum, o) => sum + o.estTotal, 0);
+      const confirmed = orders.reduce((sum, o) => sum + (o.confirmedAmount ?? 0), 0);
+      const estimated = orders.reduce((sum, o) => sum + o.estTotal, 0);
       return {
         columns: ['Metric', 'Value'],
         rows: [
-          ['Total Orders', ORDERS.length],
+          ['Total Orders', orders.length],
           ['Estimated Order Value', fPeso(estimated)],
           ['Confirmed Order Value', fPeso(confirmed)],
         ],
@@ -60,7 +64,7 @@ function buildReport(type: ReportType): ReportTable {
     }
     case 'orders_by_status': {
       const counts: Record<string, number> = {};
-      ORDERS.forEach((o) => {
+      orders.forEach((o) => {
         counts[o.status] = (counts[o.status] ?? 0) + 1;
       });
       return {
@@ -73,7 +77,7 @@ function buildReport(type: ReportType): ReportTable {
     }
     case 'top_products': {
       const totals: Record<string, number> = {};
-      ORDERS.forEach((o) =>
+      orders.forEach((o) =>
         o.items.forEach((i) => {
           totals[i.name] = (totals[i.name] ?? 0) + i.qty;
         })
@@ -88,7 +92,7 @@ function buildReport(type: ReportType): ReportTable {
     case 'low_stock': {
       return {
         columns: ['Product', 'Stock Qty', 'Threshold', 'Status'],
-        rows: PRODUCTS.filter((p) => getStockStatus(p) !== 'in_stock').map((p) => [
+        rows: products.filter((p) => getStockStatus(p) !== 'in_stock').map((p) => [
           p.name,
           p.stockQty,
           p.lowStockThreshold,
@@ -99,7 +103,7 @@ function buildReport(type: ReportType): ReportTable {
     case 'reservations': {
       return {
         columns: ['Order #', 'Customer', 'Status', 'Est. Total'],
-        rows: ORDERS.filter((o) => o.type === 'reservation').map((o) => [
+        rows: orders.filter((o) => o.type === 'reservation').map((o) => [
           o.code,
           o.customerName,
           ORDER_STATUS_LABEL[o.status],
@@ -126,6 +130,11 @@ function exportCsv(report: ReportTable, name: string) {
 }
 
 export function ReportsView() {
+  const { data, loading } = useAsync(async () => {
+    const [orders, products] = await Promise.all([fetchOrders(), fetchProducts()]);
+    return { orders, products };
+  }, []);
+
   const [type, setType] = useState<ReportType>('sales');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -187,7 +196,8 @@ export function ReportsView() {
               variant="contained"
               color="inherit"
               startIcon={<Iconify icon="solar:chart-2-bold" />}
-              onClick={() => setReport(buildReport(type))}
+              disabled={loading}
+              onClick={() => setReport(buildReport(type, data?.orders ?? [], data?.products ?? []))}
             >
               Generate
             </Button>

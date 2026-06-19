@@ -14,14 +14,18 @@ import TableHead from '@mui/material/TableHead';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import { RouterLink } from 'src/routes/components';
 
+import { useAsync } from 'src/hooks/use-async';
+
 import { fDate } from 'src/utils/format-time';
 
+import { useAuth } from 'src/auth';
 import { fPeso } from 'src/data/pricing';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { ORDERS, PRODUCTS, OWNER_NAME } from 'src/data/mock';
+import { fetchOrders, fetchProducts } from 'src/services/db';
 import { getStockStatus, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from 'src/data/status';
 
 import { Label } from 'src/components/label';
@@ -35,36 +39,51 @@ import { DfbSummaryCard } from '../dfb-summary-card';
 // ----------------------------------------------------------------------
 
 export function OverviewAnalyticsView() {
-  const stats = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const newToday = ORDERS.filter(
-      (o) => o.status === 'new' || o.createdAt.slice(0, 10) === today
-    ).length;
-    const pending = ORDERS.filter((o) => o.status === 'pending').length;
-    const reservations = ORDERS.filter(
-      (o) => o.type === 'reservation' && !['completed', 'cancelled'].includes(o.status)
-    ).length;
-    const lowStock = PRODUCTS.filter((p) => getStockStatus(p) === 'low_stock').length;
-    const outOfStock = PRODUCTS.filter((p) => getStockStatus(p) === 'out_of_stock').length;
-    return { newToday, pending, reservations, lowStock, outOfStock };
+  const { profile } = useAuth();
+  const ownerName = profile?.full_name?.trim() || 'Owner';
+
+  const { data, loading, error } = useAsync(async () => {
+    const [products, orders] = await Promise.all([fetchProducts(), fetchOrders()]);
+    return { products, orders };
   }, []);
 
+  const products = useMemo(() => data?.products ?? [], [data]);
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const newToday = orders.filter(
+      (o) => o.status === 'new' || o.createdAt.slice(0, 10) === today
+    ).length;
+    const pending = orders.filter((o) => o.status === 'pending').length;
+    const reservations = orders.filter(
+      (o) => o.type === 'reservation' && !['completed', 'cancelled'].includes(o.status)
+    ).length;
+    const lowStock = products.filter((p) => getStockStatus(p) === 'low_stock').length;
+    const outOfStock = products.filter((p) => getStockStatus(p) === 'out_of_stock').length;
+    return { newToday, pending, reservations, lowStock, outOfStock };
+  }, [orders, products]);
+
   const recentOrders = useMemo(
-    () =>
-      [...ORDERS]
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, 5),
-    []
+    () => [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5),
+    [orders]
   );
 
   return (
     <DashboardContent maxWidth="xl">
       <Typography variant="h4" sx={{ mb: 1 }}>
-        Welcome back, {OWNER_NAME} 👋
+        Welcome back, {ownerName} 👋
       </Typography>
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: { xs: 3, md: 5 } }}>
         Here is what&apos;s happening in your shop today.
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Couldn&apos;t load shop data: {error}
+        </Alert>
+      )}
+      {loading && <LinearProgress sx={{ mb: 3 }} />}
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>

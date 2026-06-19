@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import type { Fulfilment } from 'src/data/types';
+
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -11,7 +13,8 @@ import Typography from '@mui/material/Typography';
 
 import { useRouter } from 'src/routes/hooks';
 
-import { CURRENT_BUYER } from 'src/data/mock';
+import { useAuth } from 'src/auth';
+import { updateProfile } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -23,20 +26,52 @@ import { ConfirmDialog } from 'src/components/confirm-dialog';
 
 export function BuyerProfileView() {
   const router = useRouter();
+  const { user, profile: authProfile, signOut } = useAuth();
   const { showToast, toast } = useToast();
 
-  const [profile, setProfile] = useState({
-    fullName: CURRENT_BUYER.fullName,
-    mobile: CURRENT_BUYER.mobile,
-    email: CURRENT_BUYER.email,
-    preference: CURRENT_BUYER.preference,
-    address: CURRENT_BUYER.address,
-  });
+  const [profile, setProfile] = useState<{
+    fullName: string;
+    mobile: string;
+    email: string;
+    preference: Fulfilment;
+    address: string;
+  }>({ fullName: '', mobile: '', email: '', preference: 'pickup', address: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!authProfile) return;
+    setProfile({
+      fullName: authProfile.full_name ?? '',
+      mobile: authProfile.mobile ?? '',
+      email: authProfile.email ?? '',
+      preference: authProfile.preference ?? 'pickup',
+      address: authProfile.address ?? '',
+    });
+  }, [authProfile]);
 
   const set = (key: keyof typeof profile, value: string) =>
     setProfile((prev) => ({ ...prev, [key]: value }));
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      await updateProfile(user.id, {
+        full_name: profile.fullName.trim(),
+        mobile: profile.mobile || null,
+        email: profile.email || null,
+        preference: profile.preference,
+        address: profile.address || null,
+      });
+      showToast('Profile updated.');
+    } catch {
+      showToast('Could not update profile.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Box>
@@ -85,7 +120,7 @@ export function BuyerProfileView() {
             onChange={(e) => set('address', e.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
           />
-          <Button variant="contained" onClick={() => showToast('Profile updated.')}>
+          <Button variant="contained" onClick={handleSave} loading={saving}>
             Save Changes
           </Button>
         </Stack>
@@ -163,7 +198,10 @@ export function BuyerProfileView() {
         cancelLabel="Stay"
         confirmColor="error"
         onClose={() => setConfirmSignOut(false)}
-        onConfirm={() => router.push('/login')}
+        onConfirm={async () => {
+          await signOut();
+          router.push('/login');
+        }}
       />
 
       {toast}

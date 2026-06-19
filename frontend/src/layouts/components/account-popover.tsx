@@ -14,6 +14,7 @@ import MenuItem, { menuItemClasses } from '@mui/material/MenuItem';
 
 import { useRouter, usePathname } from 'src/routes/hooks';
 
+import { useAuth } from 'src/auth';
 import { _myAccount } from 'src/_mock';
 
 // ----------------------------------------------------------------------
@@ -31,6 +32,8 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
   const router = useRouter();
 
   const pathname = usePathname();
+
+  const { signOut } = useAuth();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -134,8 +137,9 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
             color="error"
             size="medium"
             variant="text"
-            onClick={() => {
+            onClick={async () => {
               handleClosePopover();
+              await signOut();
               router.push('/login/admin');
             }}
           >

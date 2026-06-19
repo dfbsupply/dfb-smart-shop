@@ -12,34 +12,56 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useAuth } from 'src/auth';
+import { supabase } from 'src/lib/supabase';
+
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
-// A-1. Admin Sign In — Firebase Authentication, admin role (Objective 4).
+// A-1. Admin Sign In — Supabase Auth + admin-role gate (Objective 4).
+// Signs in, then confirms the account is an admin via the is_admin() RPC.
+// A non-admin who knows a valid buyer password is signed back out.
 // ----------------------------------------------------------------------
 
-// Demo credentials standing in for Firebase Auth + an admin-role check.
 const ADMIN_EMAIL = 'owner@dfbsmartshop.com';
-const ADMIN_PASSWORD = 'admin1234';
 
 export function AdminSignInView() {
   const router = useRouter();
+  const { signIn, signOut } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = useCallback(() => {
-    // Stand-in for Firebase Auth. Replace with signInWithEmailAndPassword and
-    // an admin-role lookup against the Realtime Database.
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      setError('Incorrect email or password.');
+  const handleSignIn = useCallback(async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.');
       return;
     }
     setError('');
+    setLoading(true);
+
+    const { error: signInError } = await signIn(email, password);
+    if (signInError) {
+      setError(signInError);
+      setLoading(false);
+      return;
+    }
+
+    // Confirm admin privileges before entering the back-office.
+    const { data: isAdmin } = await supabase.rpc('is_admin');
+    if (isAdmin !== true) {
+      await signOut();
+      setError('This account is not authorized for admin access.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
     router.push('/admin');
-  }, [email, password, router]);
+  }, [email, password, signIn, signOut, router]);
 
   return (
     <>
@@ -105,7 +127,14 @@ export function AdminSignInView() {
           sx={{ mb: 3 }}
         />
 
-        <Button fullWidth size="large" type="submit" color="inherit" variant="contained">
+        <Button
+          fullWidth
+          size="large"
+          type="submit"
+          color="inherit"
+          variant="contained"
+          loading={loading}
+        >
           Sign In
         </Button>
 

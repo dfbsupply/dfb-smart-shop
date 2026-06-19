@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
+import { RequireAdmin } from 'src/auth';
 import { DashboardLayout } from 'src/layouts/dashboard';
 
 import { renderFallback } from './shared';
@@ -26,11 +27,13 @@ export const adminRoutes: RouteObject[] = [
   {
     path: 'admin',
     element: (
-      <DashboardLayout>
-        <Suspense fallback={renderFallback()}>
-          <Outlet />
-        </Suspense>
-      </DashboardLayout>
+      <RequireAdmin>
+        <DashboardLayout>
+          <Suspense fallback={renderFallback()}>
+            <Outlet />
+          </Suspense>
+        </DashboardLayout>
+      </RequireAdmin>
     ),
     children: [
       { index: true, element: <DashboardPage /> },

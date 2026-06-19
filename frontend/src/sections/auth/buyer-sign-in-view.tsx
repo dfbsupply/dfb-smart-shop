@@ -11,37 +11,40 @@ import Typography from '@mui/material/Typography';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { CURRENT_BUYER } from 'src/data/mock';
+import { useAuth } from 'src/auth';
 
 import { Logo } from 'src/components/logo';
 
 // ----------------------------------------------------------------------
-// B-1. Sign In Page — Firebase Authentication (Objective 4).
+// B-1. Sign In Page — Supabase Authentication (Objective 4).
 // ----------------------------------------------------------------------
 
-const DEMO_PASSWORD = 'buyer1234';
+// Prefilled demo buyer account (see supabase Phase 2 seed).
+const DEMO_BUYER_EMAIL = 'buyer@test.com';
 
 export function BuyerSignInView() {
   const router = useRouter();
+  const { signIn } = useAuth();
 
-  const [email, setEmail] = useState(CURRENT_BUYER.email);
+  const [email, setEmail] = useState(DEMO_BUYER_EMAIL);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Please enter your email and password.');
       return;
     }
-    if (email.trim().toLowerCase() !== CURRENT_BUYER.email) {
-      setError("This account doesn't exist. Try creating one.");
-      return;
-    }
-    if (password !== DEMO_PASSWORD) {
-      setError('Incorrect email or password.');
-      return;
-    }
     setError('');
+    setLoading(true);
+
+    const { error: signInError } = await signIn(email, password);
+    setLoading(false);
+    if (signInError) {
+      setError(signInError);
+      return;
+    }
     router.push('/buyer');
   };
 
@@ -93,7 +96,7 @@ export function BuyerSignInView() {
         >
           Forgot password?
         </Link>
-        <Button fullWidth size="large" type="submit" variant="contained">
+        <Button fullWidth size="large" type="submit" variant="contained" loading={loading}>
           Sign In
         </Button>
       </Box>
