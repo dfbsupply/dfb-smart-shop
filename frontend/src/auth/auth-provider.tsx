@@ -20,6 +20,14 @@ type AuthContextValue = {
   isAdmin: boolean;
   metaUserId: string | null; // user id that `profile`/`isAdmin` correspond to
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    mobile?: string
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -95,6 +103,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   }, []);
 
+  const signUp = useCallback(
+    async (email: string, password: string, fullName: string, mobile?: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: fullName.trim() } },
+      });
+      if (error) return { error: error.message, needsConfirmation: false };
+
+      // If a session came back, email confirmation is off → store the mobile too.
+      if (data.session && mobile?.trim()) {
+        await supabase.from('profiles').update({ mobile: mobile.trim() }).eq('id', data.session.user.id);
+      }
+      // No session means Supabase requires email confirmation before sign-in.
+      return { error: null, needsConfirmation: !data.session };
+    },
+    []
+  );
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/login/reset`,
+    });
+    return { error: error ? error.message : null };
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error ? error.message : null };
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -108,9 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin,
       metaUserId,
       signIn,
+      signUp,
+      sendPasswordReset,
+      updatePassword,
       signOut,
     }),
-    [loading, session, profile, isAdmin, metaUserId, signIn, signOut]
+    [loading, session, profile, isAdmin, metaUserId, signIn, signUp, sendPasswordReset, updatePassword, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
-import { requestPasswordReset } from 'src/services/firebase';
+import { useAuth } from 'src/auth';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -27,9 +27,11 @@ type Props = {
 };
 
 export function ForgotPasswordView({ signInHref, title = 'Forgot your password?' }: Props) {
+  const { sendPasswordReset } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!EMAIL_RE.test(email.trim())) {
@@ -37,12 +39,14 @@ export function ForgotPasswordView({ signInHref, title = 'Forgot your password?'
       return;
     }
     setError('');
-    try {
-      await requestPasswordReset(email.trim());
-      setSent(true);
-    } catch {
+    setLoading(true);
+    const { error: resetError } = await sendPasswordReset(email.trim());
+    setLoading(false);
+    if (resetError) {
       setError("Couldn't send the reset link. Please try again.");
+      return;
     }
+    setSent(true);
   };
 
   if (sent) {
@@ -93,7 +97,7 @@ export function ForgotPasswordView({ signInHref, title = 'Forgot your password?'
           onChange={(e) => setEmail(e.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
         />
-        <Button fullWidth size="large" type="submit" variant="contained">
+        <Button fullWidth size="large" type="submit" variant="contained" loading={loading}>
           Send Reset Link
         </Button>
       </Box>

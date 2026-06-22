@@ -11,16 +11,20 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useAuth } from 'src/auth';
+
 import { Logo } from 'src/components/logo';
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
-// B-2. Create Account / Register Page — Firebase Authentication (Objective 4).
+// B-2. Create Account / Register Page — Supabase Authentication (Objective 4).
 // ----------------------------------------------------------------------
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function BuyerRegisterView() {
   const router = useRouter();
+  const { signUp } = useAuth();
 
   const [form, setForm] = useState({
     fullName: '',
@@ -31,11 +35,17 @@ export function BuyerRegisterView() {
     agree: false,
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
 
   const set = (key: keyof typeof form, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (!form.fullName.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
     if (!EMAIL_RE.test(form.email)) {
       setError('Please enter a valid email address.');
       return;
@@ -49,8 +59,43 @@ export function BuyerRegisterView() {
       return;
     }
     setError('');
-    router.push('/buyer');
+    setLoading(true);
+
+    const { error: signUpError, needsConfirmation } = await signUp(
+      form.email,
+      form.password,
+      form.fullName,
+      form.mobile
+    );
+    setLoading(false);
+
+    if (signUpError) {
+      setError(signUpError);
+      return;
+    }
+    if (needsConfirmation) {
+      setConfirmSent(true); // email confirmation required before sign-in
+      return;
+    }
+    router.push('/buyer'); // signed in immediately
   };
+
+  if (confirmSent) {
+    return (
+      <Box sx={{ textAlign: 'center' }}>
+        <Iconify icon="solar:letter-opened-bold-duotone" width={64} sx={{ color: 'primary.main' }} />
+        <Typography variant="h5" sx={{ mt: 2 }}>
+          Confirm your email
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, mb: 3 }}>
+          We sent a confirmation link to <strong>{form.email}</strong>. Click it, then sign in.
+        </Typography>
+        <Button component={RouterLink} href="/login" variant="contained">
+          Back to Sign In
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -134,6 +179,7 @@ export function BuyerRegisterView() {
           type="submit"
           variant="contained"
           disabled={!form.agree}
+          loading={loading}
         >
           Create Account
         </Button>

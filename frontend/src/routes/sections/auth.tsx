@@ -22,6 +22,7 @@ const AdminForgotPasswordPage = lazy(() => import('src/pages/auth/admin-forgot-p
 const BuyerSignInPage = lazy(() => import('src/pages/auth/buyer-sign-in'));
 const BuyerRegisterPage = lazy(() => import('src/pages/auth/buyer-register'));
 const BuyerForgotPasswordPage = lazy(() => import('src/pages/auth/buyer-forgot-password'));
+const ResetPasswordPage = lazy(() => import('src/pages/auth/reset-password'));
 
 const adminAuth = (element: React.ReactNode) => (
   <AuthLayout>
@@ -40,6 +41,7 @@ export const authRoutes: RouteObject[] = [
   { path: 'login', element: buyerAuth(<BuyerSignInPage />) },
   { path: 'login/register', element: buyerAuth(<BuyerRegisterPage />) },
   { path: 'login/forgot-password', element: buyerAuth(<BuyerForgotPasswordPage />) },
+  { path: 'login/reset', element: buyerAuth(<ResetPasswordPage />) },
   // Admin / staff
   { path: 'login/admin', element: adminAuth(<AdminSignInPage />) },
   { path: 'login/admin/forgot-password', element: adminAuth(<AdminForgotPasswordPage />) },
