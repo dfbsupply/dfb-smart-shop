@@ -13,6 +13,7 @@ import { renderFallback } from './shared';
 
 const HomePage = lazy(() => import('src/pages/store/home'));
 const CatalogPage = lazy(() => import('src/pages/store/catalog'));
+const QuotePage = lazy(() => import('src/pages/store/quote'));
 const ProductPage = lazy(() => import('src/pages/store/product'));
 const VisualSearchPage = lazy(() => import('src/pages/store/visual-search'));
 const CartPage = lazy(() => import('src/pages/store/cart'));
@@ -33,6 +34,7 @@ export const storeRoutes: RouteObject[] = [
     children: [
       { index: true, element: <HomePage /> },
       { path: 'catalog', element: <CatalogPage /> },
+      { path: 'quote', element: <QuotePage /> },
       { path: 'product/:id', element: <ProductPage /> },
       { path: 'visual-search', element: <VisualSearchPage /> },
       { path: 'cart', element: <CartPage /> },

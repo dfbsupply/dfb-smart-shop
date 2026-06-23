@@ -43,7 +43,7 @@ const QUICK_ACTIONS = [
     title: 'Instant Quote',
     body: 'Enter width and height to get a price in seconds.',
     link: 'Get a Quote',
-    href: '/catalog',
+    href: '/quote',
     icon: 'solar:calculator-bold-duotone',
     tour: 'quote',
   },
