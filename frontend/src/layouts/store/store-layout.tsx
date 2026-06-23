@@ -4,11 +4,15 @@ import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
+import Menu from '@mui/material/Menu';
 import Badge from '@mui/material/Badge';
 import AppBar from '@mui/material/AppBar';
 import Drawer from '@mui/material/Drawer';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import Toolbar from '@mui/material/Toolbar';
+import MenuItem from '@mui/material/MenuItem';
 import ListItem from '@mui/material/ListItem';
 import Container from '@mui/material/Container';
 import { useTheme } from '@mui/material/styles';
@@ -18,6 +22,8 @@ import ListItemButton from '@mui/material/ListItemButton';
 
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
+
+import { useAuth } from 'src/auth';
 
 import { Iconify } from 'src/components/iconify';
 import { OfflineNotice } from 'src/components/offline-notice';
@@ -54,7 +60,13 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { count } = useCart();
   const { startTour } = useStoreTour();
+  const { session, profile, isAdmin, signOut } = useAuth();
   const [openDrawer, setOpenDrawer] = useState(false);
+  const [accountEl, setAccountEl] = useState<HTMLElement | null>(null);
+
+  const isLoggedIn = !!session;
+  const firstName = profile?.full_name?.trim().split(' ')[0] || (isAdmin ? 'Owner' : 'Account');
+  const accountHref = isAdmin ? '/admin' : '/buyer';
 
   const renderLogo = (
     <Link
@@ -82,16 +94,66 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
         </Badge>
       </IconButton>
       <LanguageSwitcher />
-      <Button
-        component={RouterLink}
-        href="/login"
-        variant="outlined"
-        color="inherit"
-        size="small"
-        sx={{ ml: 1, display: { xs: 'none', sm: 'inline-flex' } }}
-      >
-        {t('nav.signIn')}
-      </Button>
+
+      {isLoggedIn ? (
+        <>
+          <Button
+            onClick={(e) => setAccountEl(e.currentTarget)}
+            color="inherit"
+            size="small"
+            startIcon={
+              <Avatar sx={{ width: 24, height: 24, fontSize: 13, bgcolor: 'primary.main' }}>
+                {firstName.charAt(0).toUpperCase()}
+              </Avatar>
+            }
+            endIcon={<Iconify icon="eva:chevron-down-fill" width={16} />}
+            sx={{ ml: 1, display: { xs: 'none', sm: 'inline-flex' } }}
+          >
+            {firstName}
+          </Button>
+          <Menu
+            anchorEl={accountEl}
+            open={!!accountEl}
+            onClose={() => setAccountEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem component={RouterLink} href={accountHref} onClick={() => setAccountEl(null)}>
+              {isAdmin ? 'Admin Dashboard' : 'My Account'}
+            </MenuItem>
+            {!isAdmin && (
+              <MenuItem
+                component={RouterLink}
+                href="/buyer/orders"
+                onClick={() => setAccountEl(null)}
+              >
+                My Orders
+              </MenuItem>
+            )}
+            <Divider />
+            <MenuItem
+              onClick={async () => {
+                setAccountEl(null);
+                await signOut();
+              }}
+              sx={{ color: 'error.main' }}
+            >
+              Sign Out
+            </MenuItem>
+          </Menu>
+        </>
+      ) : (
+        <Button
+          component={RouterLink}
+          href="/login"
+          variant="outlined"
+          color="inherit"
+          size="small"
+          sx={{ ml: 1, display: { xs: 'none', sm: 'inline-flex' } }}
+        >
+          {t('nav.signIn')}
+        </Button>
+      )}
       <IconButton
         onClick={() => setOpenDrawer(true)}
         sx={{ display: { md: 'none' } }}
@@ -170,15 +232,51 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
                   </ListItemButton>
                 </ListItem>
               ))}
-              <ListItem disablePadding>
-                <ListItemButton
-                  component={RouterLink}
-                  href="/login"
-                  onClick={() => setOpenDrawer(false)}
-                >
-                  {t('nav.signIn')}
-                </ListItemButton>
-              </ListItem>
+              {isLoggedIn ? (
+                <>
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      component={RouterLink}
+                      href={accountHref}
+                      onClick={() => setOpenDrawer(false)}
+                    >
+                      {isAdmin ? 'Admin Dashboard' : 'My Account'}
+                    </ListItemButton>
+                  </ListItem>
+                  {!isAdmin && (
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        component={RouterLink}
+                        href="/buyer/orders"
+                        onClick={() => setOpenDrawer(false)}
+                      >
+                        My Orders
+                      </ListItemButton>
+                    </ListItem>
+                  )}
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={async () => {
+                        setOpenDrawer(false);
+                        await signOut();
+                      }}
+                      sx={{ color: 'error.main' }}
+                    >
+                      Sign Out
+                    </ListItemButton>
+                  </ListItem>
+                </>
+              ) : (
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={RouterLink}
+                    href="/login"
+                    onClick={() => setOpenDrawer(false)}
+                  >
+                    {t('nav.signIn')}
+                  </ListItemButton>
+                </ListItem>
+              )}
             </List>
           </Box>
         </Drawer>
