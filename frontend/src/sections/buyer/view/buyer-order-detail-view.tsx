@@ -29,6 +29,7 @@ import { ConfirmDialog } from 'src/components/confirm-dialog';
 import { useCart } from 'src/sections/store/cart-context';
 
 import { BuyerStatusBadge } from '../buyer-status-badge';
+import { BuyerOrderTracker } from '../buyer-order-tracker';
 
 // ----------------------------------------------------------------------
 // B-5 / B-6. Order (and Reservation) Detail — computed price breakdown +
@@ -107,6 +108,11 @@ export function BuyerOrderDetailView() {
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
         {fDateTime(order.createdAt)}
       </Typography>
+
+      {/* Status tracker */}
+      <Box sx={{ mt: 2 }}>
+        <BuyerOrderTracker order={order} />
+      </Box>
 
       {/* Status helper */}
       <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />} sx={{ my: 2 }}>
