@@ -1,6 +1,7 @@
 export * from './orders';
 export * from './promos';
 export * from './mappers';
+export * from './storage';
 export * from './profiles';
 export * from './products';
 export * from './settings';

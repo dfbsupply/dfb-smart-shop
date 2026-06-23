@@ -1,7 +1,7 @@
 import type { ProductCategory } from 'src/data/types';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useRef, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -13,6 +13,7 @@ import Switch from '@mui/material/Switch';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -25,7 +26,7 @@ import { useAsync } from 'src/hooks/use-async';
 
 import { PRODUCT_CATEGORIES } from 'src/data/types';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { fetchProduct, createProduct, updateProduct } from 'src/services/db';
+import { fetchProduct, createProduct, updateProduct, uploadProductImage } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -74,6 +75,25 @@ export function ProductFormView() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(Array.from(files).map((f) => uploadProductImage(f)));
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
+    } catch {
+      showToast('Image upload failed — is the product-images storage bucket set up?', 'error');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const removeImage = (src: string) =>
+    setForm((prev) => ({ ...prev, images: prev.images.filter((i) => i !== src) }));
 
   useEffect(() => {
     if (!existing) return;
@@ -273,7 +293,16 @@ export function ProductFormView() {
               Clear, well-lit images improve visual search matching.
             </Typography>
 
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              multiple
+              hidden
+              onChange={(e) => handleUpload(e.target.files)}
+            />
             <Box
+              onClick={() => fileRef.current?.click()}
               sx={{
                 mt: 2,
                 py: 5,
@@ -285,21 +314,41 @@ export function ProductFormView() {
                 color: 'text.secondary',
                 border: (theme) => `1px dashed ${theme.vars.palette.divider}`,
                 cursor: 'pointer',
+                '&:hover': { borderColor: 'primary.main', color: 'primary.main' },
               }}
             >
               <Iconify icon="solar:cloud-upload-bold-duotone" width={40} />
-              <Typography variant="body2">Upload high-resolution photos</Typography>
+              <Typography variant="body2">
+                {uploading ? 'Uploading…' : 'Click to upload product photos'}
+              </Typography>
             </Box>
+            {uploading && <LinearProgress sx={{ mt: 1 }} />}
 
             {form.images.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {form.images.map((src) => (
-                  <Box
-                    key={src}
-                    component="img"
-                    src={src}
-                    sx={{ width: 64, height: 64, borderRadius: 1, objectFit: 'cover' }}
-                  />
+                  <Box key={src} sx={{ position: 'relative' }}>
+                    <Box
+                      component="img"
+                      src={src}
+                      sx={{ width: 64, height: 64, borderRadius: 1, objectFit: 'cover' }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => removeImage(src)}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        p: 0.25,
+                        bgcolor: 'background.paper',
+                        boxShadow: 1,
+                        '&:hover': { bgcolor: 'background.paper' },
+                      }}
+                    >
+                      <Iconify icon="mingcute:close-line" width={14} />
+                    </IconButton>
+                  </Box>
                 ))}
               </Box>
             )}
