@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import type { RiderLoc } from 'src/services/tracking';
+
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -20,11 +22,13 @@ import { useAsync } from 'src/hooks/use-async';
 import { fDateTime } from 'src/utils/format-time';
 
 import { fPeso, computeUnitPrice } from 'src/data/pricing';
+import { subscribeRiderLocation } from 'src/services/tracking';
 import { fetchOrder, cancelOrder, fetchBranches, fetchOrderEvents } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
 import { LocationMap } from 'src/components/location-map';
+import { LiveTrackMap } from 'src/components/live-track-map';
 import { ConfirmDialog } from 'src/components/confirm-dialog';
 
 import { useCart } from 'src/sections/store/cart-context';
@@ -74,6 +78,15 @@ export function BuyerOrderDetailView() {
   };
   const [expanded, setExpanded] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [riderLoc, setRiderLoc] = useState<RiderLoc | null>(null);
+
+  // Live rider tracking for delivery orders that are on the way.
+  const isDelivery = order?.fulfilment === 'delivery';
+  const inTransit = order ? ['confirmed', 'ready'].includes(order.status) : false;
+  useEffect(() => {
+    if (!id || !isDelivery) return undefined;
+    return subscribeRiderLocation(id, setRiderLoc);
+  }, [id, isDelivery]);
 
   if (loading) {
     return <LinearProgress sx={{ mt: 2 }} />;
@@ -252,6 +265,37 @@ export function BuyerOrderDetailView() {
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
             {pickupBranch.address}
           </Typography>
+        </Card>
+      )}
+
+      {/* Live delivery tracking (delivery orders) */}
+      {isDelivery && (
+        <Card sx={{ p: 2, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Iconify icon="solar:delivery-bold" width={20} sx={{ color: 'text.secondary' }} />
+            <Typography variant="subtitle2">Live delivery tracking</Typography>
+          </Box>
+          {riderLoc ? (
+            <LiveTrackMap rider={riderLoc} height={240} />
+          ) : (
+            <Box
+              sx={{
+                py: 4,
+                px: 2,
+                textAlign: 'center',
+                color: 'text.secondary',
+                bgcolor: 'background.neutral',
+                borderRadius: 1.5,
+              }}
+            >
+              <Iconify icon="solar:map-point-wave-bold-duotone" width={40} />
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {inTransit
+                  ? 'Waiting for the rider to start sharing their location…'
+                  : 'Live tracking will appear here once your order is on the way.'}
+              </Typography>
+            </Box>
+          )}
         </Card>
       )}
 

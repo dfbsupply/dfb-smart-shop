@@ -392,6 +392,18 @@ export function OrderDetailView() {
               >
                 Print Order Slip
               </Button>
+              {order.fulfilment === 'delivery' && order.status !== 'cancelled' && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  startIcon={<Iconify icon="solar:map-arrow-up-bold" />}
+                  href={`/track/${order.id}`}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Open Rider Tracking
+                </Button>
+              )}
             </Stack>
           </Card>
         </Grid>
