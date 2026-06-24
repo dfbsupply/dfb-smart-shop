@@ -14,6 +14,8 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { fetchRoute } from 'src/utils/route';
+
 import { createRiderBroadcaster } from 'src/services/tracking';
 
 import { Logo } from 'src/components/logo';
@@ -28,6 +30,7 @@ import { LiveTrackMap } from 'src/components/live-track-map';
 // ----------------------------------------------------------------------
 
 const SIM_START: RiderLoc = { lat: 14.5826, lng: 121.0939, at: 0 }; // Pasig area
+const SIM_DEST = { lat: 14.6357, lng: 121.1089 }; // San Isidro, Cainta area
 
 export function RiderTrackView() {
   const { orderId } = useParams();
@@ -95,13 +98,21 @@ export function RiderTrackView() {
     acquireWake(); // keep the screen on while sharing
 
     if (simulate) {
-      // Animate a rider drifting NE so the customer sees the pin move.
-      let cur: RiderLoc = { ...SIM_START, at: Date.now() };
-      push(cur);
-      simTimer.current = setInterval(() => {
-        cur = { lat: cur.lat + 0.0006, lng: cur.lng + 0.0004, at: Date.now() };
-        push(cur);
-      }, 2000);
+      // Drive the simulated rider along a real road route (OSRM) so the demo
+      // pin actually follows streets. Falls back to a diagonal drift if routing
+      // is unavailable.
+      push({ ...SIM_START, at: Date.now() });
+      fetchRoute(SIM_START, SIM_DEST).then((route) => {
+        if (!broadcaster.current) return; // stopped before route resolved
+        const pts =
+          route && route.points.length > 1 ? route.points : [SIM_START, SIM_DEST];
+        const step = Math.max(1, Math.round(pts.length / 40)); // ~60s end-to-end
+        let i = 0;
+        simTimer.current = setInterval(() => {
+          i = Math.min(i + step, pts.length - 1); // hold at destination, stays "Live"
+          push({ lat: pts[i].lat, lng: pts[i].lng, at: Date.now() });
+        }, 1500);
+      });
       return;
     }
 
@@ -168,7 +179,11 @@ export function RiderTrackView() {
             )}
           </Box>
 
-          <LiveTrackMap rider={pos} height={300} />
+          <LiveTrackMap
+            rider={pos}
+            destination={simulate && sharing ? SIM_DEST : undefined}
+            height={300}
+          />
 
           {error && <Alert severity="error">{error}</Alert>}
 
