@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
@@ -20,6 +21,7 @@ import { RouterLink } from 'src/routes/components';
 import { useAsync } from 'src/hooks/use-async';
 
 import { fDateTime } from 'src/utils/format-time';
+import { geocodeAddress } from 'src/utils/geocode';
 
 import { fPeso, computeUnitPrice } from 'src/data/pricing';
 import { subscribeRiderLocation } from 'src/services/tracking';
@@ -79,14 +81,40 @@ export function BuyerOrderDetailView() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [riderLoc, setRiderLoc] = useState<RiderLoc | null>(null);
+  const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   // Live rider tracking for delivery orders that are on the way.
   const isDelivery = order?.fulfilment === 'delivery';
   const inTransit = order ? ['confirmed', 'ready'].includes(order.status) : false;
+  const deliveryAddress = isDelivery ? order?.address : undefined;
+
   useEffect(() => {
     if (!id || !isDelivery) return undefined;
     return subscribeRiderLocation(id, setRiderLoc);
   }, [id, isDelivery]);
+
+  // Geocode the delivery address once to drop the destination pin.
+  useEffect(() => {
+    if (!deliveryAddress) return undefined;
+    let active = true;
+    geocodeAddress(deliveryAddress).then((d) => {
+      if (active && d) setDestination(d);
+    });
+    return () => {
+      active = false;
+    };
+  }, [deliveryAddress]);
+
+  // Tick so the "last seen" / live-vs-paused indicator stays current.
+  useEffect(() => {
+    if (!isDelivery) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [isDelivery]);
+
+  const riderAgeMs = riderLoc ? now - riderLoc.at : null;
+  const riderLive = riderAgeMs != null && riderAgeMs < 20000;
 
   if (loading) {
     return <LinearProgress sx={{ mt: 2 }} />;
@@ -271,12 +299,35 @@ export function BuyerOrderDetailView() {
       {/* Live delivery tracking (delivery orders) */}
       {isDelivery && (
         <Card sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <Iconify icon="solar:delivery-bold" width={20} sx={{ color: 'text.secondary' }} />
-            <Typography variant="subtitle2">Live delivery tracking</Typography>
+            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+              Live delivery tracking
+            </Typography>
+            {riderLoc && (
+              <Chip
+                size="small"
+                color={riderLive ? 'success' : 'warning'}
+                label={
+                  riderLive
+                    ? 'Live'
+                    : `Paused • ${Math.round((riderAgeMs ?? 0) / 1000)}s ago`
+                }
+                icon={<Iconify icon={riderLive ? 'solar:gps-bold' : 'solar:gps-broken'} width={14} />}
+              />
+            )}
           </Box>
-          {riderLoc ? (
-            <LiveTrackMap rider={riderLoc} height={240} />
+
+          {riderLoc || destination ? (
+            <>
+              <LiveTrackMap rider={riderLoc} destination={destination} height={240} />
+              {riderLoc && !riderLive && (
+                <Typography variant="caption" sx={{ color: 'warning.darker', mt: 1, display: 'block' }}>
+                  The rider&apos;s location paused (they may have lost signal or backgrounded the
+                  app). Showing their last known spot.
+                </Typography>
+              )}
+            </>
           ) : (
             <Box
               sx={{

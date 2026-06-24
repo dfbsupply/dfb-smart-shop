@@ -70,6 +70,8 @@ export function LiveTrackMap({ rider, destination = null, height = 280 }: Props)
       } else {
         destRef.current.setLatLng([destination.lat, destination.lng]);
       }
+      // Center on the destination until the rider's pin arrives.
+      if (!riderRef.current) map.setView([destination.lat, destination.lng], 14);
     } else if (destRef.current) {
       destRef.current.remove();
       destRef.current = null;

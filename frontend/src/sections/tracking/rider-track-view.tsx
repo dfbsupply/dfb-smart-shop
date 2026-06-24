@@ -35,13 +35,36 @@ export function RiderTrackView() {
   const [simulate, setSimulate] = useState(false);
   const [pos, setPos] = useState<RiderLoc | null>(null);
   const [error, setError] = useState('');
+  const [backgrounded, setBackgrounded] = useState(false);
 
   const broadcaster = useRef<ReturnType<typeof createRiderBroadcaster> | null>(null);
   const watchId = useRef<number | null>(null);
   const simTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeat = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPos = useRef<RiderLoc | null>(null);
+  const wakeLock = useRef<{ release?: () => void } | null>(null);
+
+  const acquireWake = useCallback(async () => {
+    try {
+      const wl = (navigator as unknown as { wakeLock?: { request: (t: string) => Promise<{ release?: () => void }> } }).wakeLock;
+      if (wl) wakeLock.current = await wl.request('screen');
+    } catch {
+      /* wake lock unsupported / denied — non-fatal */
+    }
+  }, []);
+
+  const releaseWake = useCallback(() => {
+    try {
+      wakeLock.current?.release?.();
+    } catch {
+      /* ignore */
+    }
+    wakeLock.current = null;
+  }, []);
 
   const push = useCallback((loc: RiderLoc) => {
     setPos(loc);
+    lastPos.current = loc;
     broadcaster.current?.send(loc);
   }, []);
 
@@ -54,16 +77,22 @@ export function RiderTrackView() {
       clearInterval(simTimer.current);
       simTimer.current = null;
     }
+    if (heartbeat.current) {
+      clearInterval(heartbeat.current);
+      heartbeat.current = null;
+    }
+    releaseWake();
     broadcaster.current?.stop();
     broadcaster.current = null;
     setSharing(false);
-  }, []);
+  }, [releaseWake]);
 
   const start = useCallback(() => {
     if (!orderId) return;
     setError('');
     broadcaster.current = createRiderBroadcaster(orderId);
     setSharing(true);
+    acquireWake(); // keep the screen on while sharing
 
     if (simulate) {
       // Animate a rider drifting NE so the customer sees the pin move.
@@ -89,7 +118,24 @@ export function RiderTrackView() {
       },
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
     );
-  }, [orderId, simulate, push, stop]);
+    // Heartbeat: keep re-sending the last fix so a stationary-but-connected
+    // rider still reads as "Live" and late-joining customers get the position.
+    heartbeat.current = setInterval(() => {
+      const lp = lastPos.current;
+      if (lp) broadcaster.current?.send({ lat: lp.lat, lng: lp.lng, at: Date.now() });
+    }, 6000);
+  }, [orderId, simulate, push, stop, acquireWake]);
+
+  // Warn when the page is backgrounded (GPS/realtime pause there); auto re-lock
+  // the screen on return.
+  useEffect(() => {
+    const onVis = () => {
+      setBackgrounded(document.hidden);
+      if (!document.hidden && sharing) acquireWake();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [sharing, acquireWake]);
 
   // Clean up on unmount.
   useEffect(() => () => stop(), [stop]);
@@ -125,6 +171,13 @@ export function RiderTrackView() {
           <LiveTrackMap rider={pos} height={300} />
 
           {error && <Alert severity="error">{error}</Alert>}
+
+          {sharing && backgrounded && (
+            <Alert severity="warning" icon={<Iconify icon="solar:eye-closed-bold" />}>
+              Tracking is paused while this screen is in the background. Keep this page open and the
+              screen on so the customer can see you move.
+            </Alert>
+          )}
 
           <FormControlLabel
             control={
