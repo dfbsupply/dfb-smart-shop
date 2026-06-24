@@ -35,9 +35,10 @@ type Props = {
   rider: LatLng | null;
   destination?: LatLng | null;
   height?: number | string;
+  onEta?: (info: { distanceM: number; durationS: number }) => void;
 };
 
-export function LiveTrackMap({ rider, destination = null, height = 280 }: Props) {
+export function LiveTrackMap({ rider, destination = null, height = 280, onEta }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const riderRef = useRef<L.Marker | null>(null);
@@ -147,11 +148,12 @@ export function LiveTrackMap({ rider, destination = null, height = 280 }: Props)
     fetchRoute(rider, destination).then((route) => {
       if (!active || !route) return;
       draw(route.points.map((p) => [p.lat, p.lng] as [number, number]), false);
+      onEta?.({ distanceM: route.distanceM, durationS: route.durationS });
     });
     return () => {
       active = false;
     };
-  }, [rider, destination]);
+  }, [rider, destination, onEta]);
 
   return (
     <Box
