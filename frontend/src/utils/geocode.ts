@@ -37,10 +37,10 @@ export async function geocodeAddress(address: string): Promise<LatLng | null> {
   if (parts.length > 1) candidates.add(parts.slice(-2).join(', '));
 
   for (const c of candidates) {
-    // eslint-disable-next-line no-await-in-loop
+     
     const hit = await geocodeOnce(`${c}, Philippines`);
     if (hit) return hit;
-    // eslint-disable-next-line no-await-in-loop
+     
     await new Promise((r) => setTimeout(r, 500)); // be polite to Nominatim
   }
   return null;

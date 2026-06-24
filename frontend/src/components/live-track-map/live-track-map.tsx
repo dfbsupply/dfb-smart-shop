@@ -5,6 +5,8 @@ import { useRef, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 
+import { fetchRoute } from 'src/utils/route';
+
 // ----------------------------------------------------------------------
 // Interactive map (Leaflet + OpenStreetMap, no API key) with a live-updating
 // rider pin and an optional destination pin. Used for real-time delivery
@@ -40,6 +42,9 @@ export function LiveTrackMap({ rider, destination = null, height = 280 }: Props)
   const mapRef = useRef<L.Map | null>(null);
   const riderRef = useRef<L.Marker | null>(null);
   const destRef = useRef<L.Marker | null>(null);
+  const routeRef = useRef<L.Polyline | null>(null);
+  const lastRouteFrom = useRef<LatLng | null>(null);
+  const lastDest = useRef<LatLng | null>(null);
 
   // Init map once.
   useEffect(() => {
@@ -96,6 +101,57 @@ export function LiveTrackMap({ rider, destination = null, height = 280 }: Props)
       map.setView([rider.lat, rider.lng], 15);
     }
   }, [rider]);
+
+  // Route line rider → destination: real road path (OSRM) with a straight-line
+  // fallback. Re-routes when the rider moves enough or the destination changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    if (!rider || !destination) {
+      if (routeRef.current) {
+        routeRef.current.remove();
+        routeRef.current = null;
+      }
+      lastRouteFrom.current = null;
+      lastDest.current = null;
+      return undefined;
+    }
+
+    const draw = (latlngs: [number, number][], dashed: boolean) => {
+      if (!routeRef.current) {
+        routeRef.current = L.polyline(latlngs, {
+          color: '#1877F2',
+          weight: 4,
+          opacity: dashed ? 0.45 : 0.85,
+          dashArray: dashed ? '6,8' : undefined,
+        }).addTo(map);
+      } else {
+        routeRef.current.setLatLngs(latlngs);
+        routeRef.current.setStyle({ opacity: dashed ? 0.45 : 0.85, dashArray: dashed ? '6,8' : undefined });
+      }
+    };
+
+    const lf = lastRouteFrom.current;
+    const ld = lastDest.current;
+    const moved = !lf || Math.hypot(lf.lat - rider.lat, lf.lng - rider.lng) > 0.0003; // ~30 m
+    const destChanged = !ld || ld.lat !== destination.lat || ld.lng !== destination.lng;
+    if (!moved && !destChanged) return undefined;
+    lastRouteFrom.current = rider;
+    lastDest.current = destination;
+
+    // Show a straight line immediately, then upgrade to the road route.
+    draw([[rider.lat, rider.lng], [destination.lat, destination.lng]], true);
+
+    let active = true;
+    fetchRoute(rider, destination).then((route) => {
+      if (!active || !route) return;
+      draw(route.points.map((p) => [p.lat, p.lng] as [number, number]), false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [rider, destination]);
 
   return (
     <Box
