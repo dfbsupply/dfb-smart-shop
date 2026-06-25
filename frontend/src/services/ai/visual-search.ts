@@ -161,12 +161,15 @@ export async function trainCategoryModel(): Promise<number> {
   const knnClassifier = await import('@tensorflow-models/knn-classifier');
   const classifier = knnClassifier.create();
   const dataset = await loadDataset();
+  // Balance the classes: use the same number of examples per category so the
+  // KNN vote isn't biased toward whichever category has the most photos.
+  const cap = Math.min(...Object.values(dataset.train).map((a) => a.length));
   let learned = 0;
   for (const [slug, paths] of Object.entries(dataset.train)) {
     const label = dataset.categories[slug];
-    for (const path of paths) {
+    for (const path of paths.slice(0, cap)) {
       try {
-        const img = await loadImageEl(path);  
+        const img = await loadImageEl(path); // eslint-disable-line no-await-in-loop
         const embedding = model.infer(img, true) as Tensor;
         classifier.addExample(embedding, label);
         embedding.dispose();
@@ -192,7 +195,7 @@ export async function predictCategory(
   if (!knn || knn.getNumClasses() === 0) return null;
   const model = await loadModel();
   const embedding = model.infer(image, true) as Tensor;
-  const prediction = await knn.predictClass(embedding, Math.min(7, knnExamples));
+  const prediction = await knn.predictClass(embedding, Math.min(5, knnExamples));
   embedding.dispose();
   return { label: prediction.label, confidence: prediction.confidences[prediction.label] ?? 0 };
 }
