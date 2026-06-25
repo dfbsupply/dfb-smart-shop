@@ -14,9 +14,10 @@ import { useAuth } from 'src/auth';
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
-// Forgot Password — shared by the admin and buyer sign-in flows. Sends a
-// reset email via Firebase Auth (stubbed for now). `signInHref` controls
-// where the "Back to sign in" link goes for each audience.
+// Forgot Password — shared by the admin and buyer sign-in flows. Sends a reset
+// email via Supabase Auth (sendPasswordReset → resetPasswordForEmail), which
+// links to the /login/reset page. `signInHref` controls where the "Back to sign
+// in" link goes for each audience.
 // ----------------------------------------------------------------------
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

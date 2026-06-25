@@ -26,7 +26,7 @@ import { ConfirmDialog } from 'src/components/confirm-dialog';
 
 export function BuyerProfileView() {
   const router = useRouter();
-  const { user, profile: authProfile, signOut } = useAuth();
+  const { user, profile: authProfile, signIn, updatePassword, signOut } = useAuth();
   const { showToast, toast } = useToast();
 
   const [profile, setProfile] = useState<{
@@ -37,6 +37,8 @@ export function BuyerProfileView() {
     address: string;
   }>({ fullName: '', mobile: '', email: '', preference: 'pickup', address: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [changingPw, setChangingPw] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -53,6 +55,41 @@ export function BuyerProfileView() {
 
   const set = (key: keyof typeof profile, value: string) =>
     setProfile((prev) => ({ ...prev, [key]: value }));
+
+  const handleUpdatePassword = async () => {
+    if (pw.next.length < 8) {
+      showToast('New password must be at least 8 characters.', 'error');
+      return;
+    }
+    if (pw.next !== pw.confirm) {
+      showToast('New passwords do not match.', 'error');
+      return;
+    }
+    const email = user?.email;
+    if (!email) {
+      showToast('No account email found.', 'error');
+      return;
+    }
+    setChangingPw(true);
+    try {
+      // Verify the current password by re-authenticating, then update it.
+      const { error: verifyError } = await signIn(email, pw.current);
+      if (verifyError) {
+        showToast('Current password is incorrect.', 'error');
+        return;
+      }
+      const { error } = await updatePassword(pw.next);
+      if (error) {
+        showToast('Could not update password.', 'error');
+        return;
+      }
+      showToast('Password changed.');
+      setShowPassword(false);
+      setPw({ current: '', next: '', confirm: '' });
+    } finally {
+      setChangingPw(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -146,31 +183,38 @@ export function BuyerProfileView() {
               fullWidth
               type="password"
               label="Current Password"
+              value={pw.current}
+              onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))}
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               fullWidth
               type="password"
               label="New Password"
+              value={pw.next}
+              onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))}
+              helperText="At least 8 characters"
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               fullWidth
               type="password"
               label="Confirm New Password"
+              value={pw.confirm}
+              onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))}
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Button color="inherit" onClick={() => setShowPassword(false)}>
-                Cancel
-              </Button>
               <Button
-                variant="contained"
+                color="inherit"
                 onClick={() => {
-                  showToast('Password changed.');
                   setShowPassword(false);
+                  setPw({ current: '', next: '', confirm: '' });
                 }}
               >
+                Cancel
+              </Button>
+              <Button variant="contained" loading={changingPw} onClick={handleUpdatePassword}>
                 Update Password
               </Button>
             </Box>
