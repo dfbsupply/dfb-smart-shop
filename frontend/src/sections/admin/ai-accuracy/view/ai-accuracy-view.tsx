@@ -24,7 +24,13 @@ import { useAsync } from 'src/hooks/use-async';
 
 import { fetchVisibleProducts } from 'src/services/db';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { classifyImage, matchProductsByLabels } from 'src/services/ai';
+import {
+  isKnnTrained,
+  classifyImage,
+  trainOnProducts,
+  matchProductsByImage,
+  matchProductsByLabels,
+} from 'src/services/ai';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -52,6 +58,7 @@ export function AiAccuracyView() {
   const products = data ?? [];
   const [rows, setRows] = useState<Row[]>([]);
   const [running, setRunning] = useState(false);
+  const [trainedCount, setTrainedCount] = useState<number | null>(null);
 
   const addFiles = useCallback((files: FileList | null) => {
     if (!files) return;
@@ -67,6 +74,13 @@ export function AiAccuracyView() {
 
   const run = useCallback(async () => {
     setRunning(true);
+    // Transfer-learn on the catalog photos first (once), then test.
+    if (!isKnnTrained()) {
+      const n = await trainOnProducts(products);
+      setTrainedCount(n);
+    } else {
+      setTrainedCount((c) => c ?? 0);
+    }
     // Sequential — one classify at a time so the shared model isn't hammered.
     for (const row of rows) {
       try {
@@ -77,7 +91,10 @@ export function AiAccuracyView() {
         await img.decode();
          
         const preds = await classifyImage(img);
-        const matches = matchProductsByLabels(preds, products);
+         
+        const matches = isKnnTrained()
+          ? await matchProductsByImage(img, products)
+          : matchProductsByLabels(preds, products);
         setRows((cur) =>
           cur.map((r) =>
             r.id === row.id ? { ...r, topLabel: preds[0]?.label ?? '—', matches, done: true } : r
@@ -131,6 +148,13 @@ export function AiAccuracyView() {
           {running ? 'Running…' : 'Run accuracy test'}
         </Button>
       </Stack>
+
+      {trainedCount != null && (
+        <Typography variant="body2" sx={{ mb: 2, color: 'success.darker' }}>
+          ✓ Model transfer-trained on {trainedCount} catalog photo
+          {trainedCount === 1 ? '' : 's'} (MobileNet embeddings + KNN).
+        </Typography>
+      )}
 
       {running && <LinearProgress sx={{ mb: 2 }} />}
 

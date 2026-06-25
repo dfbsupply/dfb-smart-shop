@@ -1,5 +1,7 @@
 import type { Product } from 'src/data/types';
+import type { Tensor } from '@tensorflow/tfjs';
 import type { MobileNet } from '@tensorflow-models/mobilenet';
+import type { KNNClassifier } from '@tensorflow-models/knn-classifier';
 
 // ----------------------------------------------------------------------
 // AI visual search (Objective 2) — TensorFlow.js + MobileNet, client-side.
@@ -110,4 +112,77 @@ export async function classifyImage(image: HTMLImageElement): Promise<Prediction
   const model = await loadModel();
   const predictions = await model.classify(image);
   return predictions.map((p) => ({ label: p.className, score: p.probability }));
+}
+
+// ----------------------------------------------------------------------
+// Transfer learning (Objective 2). Rather than relying only on generic ImageNet
+// labels, we train a K-Nearest-Neighbour classifier on MobileNet embeddings of
+// the shop's OWN product photos — so the model recognises the actual catalog.
+// Fully open source (@tensorflow-models/knn-classifier) and runs in the browser.
+// ----------------------------------------------------------------------
+
+let knn: KNNClassifier | null = null;
+let knnExamples = 0;
+
+function loadImageEl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = url;
+  });
+}
+
+/**
+ * Train the KNN classifier on each product's catalog photos (label = product id),
+ * using MobileNet embeddings. Returns the number of example photos learned.
+ */
+export async function trainOnProducts(
+  products: { id: string; images: string[] }[]
+): Promise<number> {
+  const model = await loadModel();
+  const knnClassifier = await import('@tensorflow-models/knn-classifier');
+  const classifier = knnClassifier.create();
+  let learned = 0;
+  for (const product of products) {
+    for (const url of product.images ?? []) {
+      try {
+        const img = await loadImageEl(url);  
+        const embedding = model.infer(img, true) as Tensor;
+        classifier.addExample(embedding, product.id);
+        embedding.dispose();
+        learned += 1;
+      } catch {
+        /* skip an image that fails to load (e.g. CORS) */
+      }
+    }
+  }
+  knn = classifier;
+  knnExamples = learned;
+  return learned;
+}
+
+export function isKnnTrained(): boolean {
+  return !!knn && knnExamples > 0 && knn.getNumClasses() > 0;
+}
+
+/**
+ * Rank products by KNN similarity to a query image (transfer-learned matches).
+ * Returns [] when the classifier hasn't been trained yet.
+ */
+export async function matchProductsByImage(
+  image: HTMLImageElement,
+  products: Product[]
+): Promise<Product[]> {
+  if (!knn || knn.getNumClasses() === 0) return [];
+  const model = await loadModel();
+  const embedding = model.infer(image, true) as Tensor;
+  const prediction = await knn.predictClass(embedding, Math.min(5, knnExamples));
+  embedding.dispose();
+  return Object.entries(prediction.confidences)
+    .filter(([, confidence]) => confidence > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => products.find((p) => p.id === id))
+    .filter((p): p is Product => Boolean(p));
 }

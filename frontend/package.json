@@ -37,6 +37,7 @@
     "@mui/lab": "^7.0.0-beta.10",
     "@mui/material": "^7.0.1",
     "@supabase/supabase-js": "^2.108.2",
+    "@tensorflow-models/knn-classifier": "^1.2.6",
     "@tensorflow-models/mobilenet": "^2.1.1",
     "@tensorflow/tfjs": "^4.22.0",
     "apexcharts": "^4.5.0",

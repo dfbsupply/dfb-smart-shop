@@ -1,19 +1,24 @@
 import type { Product } from 'src/data/types';
-import type { Prediction } from 'src/services/ai';
 
 import { useState, useCallback } from 'react';
 
 import { fetchVisibleProducts } from 'src/services/db';
-import { classifyImage, matchProductsByLabels } from 'src/services/ai';
+import {
+  isKnnTrained,
+  classifyImage,
+  trainOnProducts,
+  matchProductsByImage,
+  matchProductsByLabels,
+} from 'src/services/ai';
 
 // ----------------------------------------------------------------------
 // Shared client-side image search engine (TensorFlow.js + MobileNet).
 // Used by both the visual search page and the Shopee-style camera modal.
+// Uses a KNN classifier trained on the catalog photos (transfer learning) when
+// available, falling back to the generic ImageNet keyword bridge.
 // ----------------------------------------------------------------------
 
 export type SearchPhase = 'idle' | 'processing' | 'results' | 'no-match' | 'error';
-
-const CONFIDENCE_FLOOR = 0.08;
 
 export function useImageSearch() {
   const [phase, setPhase] = useState<SearchPhase>('idle');
@@ -32,17 +37,17 @@ export function useImageSearch() {
 
     try {
       await image.decode();
-      const predictions: Prediction[] = await classifyImage(image);
-      const best = predictions[0];
-
-      if (!best || best.score < CONFIDENCE_FLOOR) {
-        setPhase('no-match');
-        return;
-      }
-
       const products = await fetchVisibleProducts();
-      const matched = matchProductsByLabels(predictions, products);
-      setTopLabel(best.label);
+
+      // Transfer-learn on the catalog photos once per session.
+      if (!isKnnTrained()) await trainOnProducts(products);
+
+      const predictions = await classifyImage(image);
+      setTopLabel(predictions[0]?.label ?? '');
+
+      // Prefer the transfer-learned KNN match; fall back to the keyword bridge.
+      let matched: Product[] = isKnnTrained() ? await matchProductsByImage(image, products) : [];
+      if (matched.length === 0) matched = matchProductsByLabels(predictions, products);
 
       if (matched.length === 0) {
         setPhase('no-match');
