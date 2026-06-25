@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
-// Dynamic price formula (Objective 3)
+// Dynamic price formula (Objective 3) — matches the manuscript's pricing model:
 //
-//   unit = P_base + (W × H) × surfaceMultiplier + (2 × (W + H)) × perimeterMultiplier
+//   unit = P_base + (W × H × 1.5) + ((W + H) × 2)
+//   i.e. unit = P_base + (W × H) × surfaceMultiplier + (W + H) × perimeterMultiplier
 //
-// Surface area drives material cost; perimeter drives framing/labour. Both
-// multipliers are configurable from Settings (A-10) so the constants are
-// justifiable rather than hard-coded.
+// Surface area (W × H) drives material cost; (W + H) × multiplier covers the
+// framing/labour. Defaults: surface 1.5, perimeter 2 (the manuscript constants).
 // ----------------------------------------------------------------------
 
 export const DEFAULT_SURFACE_MULTIPLIER = 1.5;
@@ -34,7 +34,7 @@ export function computeUnitPrice({
   perimeterMultiplier = DEFAULT_PERIMETER_MULTIPLIER,
 }: ComputeArgs): PriceBreakdown {
   const surface = width * height * surfaceMultiplier;
-  const perimeter = 2 * (width + height) * perimeterMultiplier;
+  const perimeter = (width + height) * perimeterMultiplier;
   const unit = base + surface + perimeter;
 
   return {

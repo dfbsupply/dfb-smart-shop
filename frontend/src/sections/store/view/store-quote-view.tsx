@@ -181,7 +181,7 @@ export function StoreQuoteView() {
 
                 <Row label="Base material" value={fPeso(result.base)} />
                 <Row label="Surface area (W × H × 1.5)" value={fPeso(result.surface)} />
-                <Row label="Frame / perimeter (2 × (W + H) × 2)" value={fPeso(result.perimeter)} />
+                <Row label="Frame / perimeter ((W + H) × 2)" value={fPeso(result.perimeter)} />
                 <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
                 <Row label="Per unit" value={fPeso(result.unit)} bold />
                 <Row

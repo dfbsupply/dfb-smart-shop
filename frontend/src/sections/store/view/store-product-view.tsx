@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Grid from '@mui/material/Grid';
-import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
@@ -17,7 +17,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { useAsync } from 'src/hooks/use-async';
 
-import { fPeso, computeUnitPrice, type PriceBreakdown } from 'src/data/pricing';
+import { fPeso, computeUnitPrice } from 'src/data/pricing';
 import { getStockStatus, STOCK_STATUS_LABEL, STOCK_STATUS_COLOR } from 'src/data/status';
 import { fetchProduct, fetchVisibleProducts, fetchRecommendations } from 'src/services/db';
 
@@ -58,9 +58,17 @@ export function StoreProductView() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [qty, setQty] = useState('1');
-  const [error, setError] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
-  const [result, setResult] = useState<PriceBreakdown | null>(null);
+
+  const w = Number(width);
+  const h = Number(height);
+  const dimsValid = !!width && !!height && !Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0;
+  // Live price: recomputes as the customer types — real-time (Objective 3).
+  const result = useMemo(
+    () =>
+      product && dimsValid ? computeUnitPrice({ base: product.basePrice, width: w, height: h }) : null,
+    [product, dimsValid, w, h]
+  );
 
   if (loading) {
     return <LinearProgress sx={{ mt: 2 }} />;
@@ -86,40 +94,15 @@ export function StoreProductView() {
     .map((addonId) => data?.products.find((p) => p.id === addonId))
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-  const handleCalculate = () => {
-    if (!width || !height) {
-      setError('Please enter both width and height.');
-      setResult(null);
-      return;
-    }
-    const w = Number(width);
-    const h = Number(height);
-    if (Number.isNaN(w) || Number.isNaN(h)) {
-      setError('Please enter numbers only.');
-      setResult(null);
-      return;
-    }
-    if (w <= 0 || h <= 0) {
-      setError('Measurements must be greater than 0.');
-      setResult(null);
-      return;
-    }
-    setError('');
-    setResult(computeUnitPrice({ base: product.basePrice, width: w, height: h }));
-  };
-
   const handleAddToCart = () => {
-    if (!result) {
-      handleCalculate();
-      return;
-    }
+    if (!result) return;
     addItem({
       productId: product.id,
       name: product.name,
       image: product.images[0],
       basePrice: product.basePrice,
-      width: Number(width),
-      height: Number(height),
+      width: w,
+      height: h,
       qty: quantity,
       unitPrice: result.unit,
       source: referencePhoto ? 'visual_search' : 'manual',
@@ -194,7 +177,7 @@ export function StoreProductView() {
           <Card sx={{ p: 3, bgcolor: 'background.neutral' }}>
             <Typography variant="h6">Get Your Price</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              Enter your measurements to calculate the cost for your exact size.
+              Enter your measurements — the price updates instantly as you type.
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -222,23 +205,25 @@ export function StoreProductView() {
               />
             </Box>
 
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
+            {!result && (
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                Enter a width and height greater than 0 to see your price.
+              </Typography>
             )}
 
-            <Button variant="contained" color="inherit" onClick={handleCalculate}>
-              Calculate Price
-            </Button>
-
             {result && (
-              <Box sx={{ mt: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+              <Box sx={{ mt: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     Estimated Price:
                   </Typography>
                   <Typography variant="h4">{fPeso(result.unit * quantity)}</Typography>
+                  <Chip
+                    size="small"
+                    color="success"
+                    label="Live"
+                    icon={<Iconify icon="solar:bolt-bold" width={14} />}
+                  />
                 </Box>
 
                 <Button
