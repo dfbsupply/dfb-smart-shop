@@ -161,13 +161,12 @@ export async function trainCategoryModel(): Promise<number> {
   const knnClassifier = await import('@tensorflow-models/knn-classifier');
   const classifier = knnClassifier.create();
   const dataset = await loadDataset();
-  // Balance the classes: use the same number of examples per category so the
-  // KNN vote isn't biased toward whichever category has the most photos.
-  const cap = Math.min(...Object.values(dataset.train).map((a) => a.length));
+  // The dataset is hand-curated and clean, so train on every example per
+  // category (more examples per class = better separation).
   let learned = 0;
   for (const [slug, paths] of Object.entries(dataset.train)) {
     const label = dataset.categories[slug];
-    for (const path of paths.slice(0, cap)) {
+    for (const path of paths) {
       try {
         const img = await loadImageEl(path); // eslint-disable-line no-await-in-loop
         const embedding = model.infer(img, true) as Tensor;
