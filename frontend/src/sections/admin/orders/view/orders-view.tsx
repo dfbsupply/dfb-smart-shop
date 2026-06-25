@@ -97,7 +97,7 @@ export function OrdersView() {
   }, [orders, tab, search]);
 
   return (
-    <DashboardContent>
+    <DashboardContent maxWidth={false}>
       <Typography variant="h4" sx={{ mb: 5 }}>
         Orders
       </Typography>

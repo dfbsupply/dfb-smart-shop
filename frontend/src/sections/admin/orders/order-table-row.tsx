@@ -2,13 +2,12 @@ import type { Order, OrderStatus } from 'src/data/types';
 
 import Box from '@mui/material/Box';
 import Select from '@mui/material/Select';
-import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
 import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 
-import { RouterLink } from 'src/routes/components';
+import { useRouter } from 'src/routes/hooks';
 
 import { fDate } from 'src/utils/format-time';
 
@@ -30,11 +29,16 @@ type Props = {
 };
 
 export function OrderTableRow({ row, onStatusChange }: Props) {
+  const router = useRouter();
   const itemCount = row.items.reduce((n, i) => n + i.qty, 0);
   const summary = row.items.map((i) => i.name).join(', ');
 
   return (
-    <TableRow hover>
+    <TableRow
+      hover
+      onClick={() => router.push(`/admin/orders/${row.id}`)}
+      sx={{ cursor: 'pointer' }}
+    >
       <TableCell sx={{ fontWeight: 'fontWeightSemiBold', whiteSpace: 'nowrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           {row.code}
@@ -76,7 +80,7 @@ export function OrderTableRow({ row, onStatusChange }: Props) {
         {row.fulfilment === 'delivery' ? 'Delivery' : 'Pickup'}
       </TableCell>
 
-      <TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
         <Select
           size="small"
           value={row.status}
@@ -101,11 +105,10 @@ export function OrderTableRow({ row, onStatusChange }: Props) {
 
       <TableCell sx={{ whiteSpace: 'nowrap' }}>{fDate(row.createdAt)}</TableCell>
 
-      <TableCell align="right">
-        <Box>
-          <Button component={RouterLink} href={`/admin/orders/${row.id}`} size="small" color="inherit">
-            View
-          </Button>
+      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+          <Typography variant="body2">View</Typography>
+          <Iconify icon="eva:arrow-ios-forward-fill" width={18} />
         </Box>
       </TableCell>
     </TableRow>
