@@ -31,7 +31,7 @@ import { fDateTime } from 'src/utils/format-time';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { fetchOrder, updateOrder } from 'src/services/db';
-import { fPeso, computeUnitPrice } from 'src/data/pricing';
+import { fPeso, formatItemSize, computeUnitPrice } from 'src/data/pricing';
 import {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
@@ -207,7 +207,7 @@ export function OrderDetailView() {
                             </Box>
                           </TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {item.width} × {item.height} in
+                            {formatItemSize(item.width, item.height)}
                           </TableCell>
                           <TableCell align="center">{item.qty}</TableCell>
                           <TableCell>
@@ -282,7 +282,7 @@ export function OrderDetailView() {
                       <Box>
                         <Typography variant="subtitle2">{item.name}</Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          Customer-entered size: {item.width} × {item.height} in · Qty {item.qty}
+                          Customer-entered size: {formatItemSize(item.width, item.height)} · Qty {item.qty}
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                           Matched to this product from the customer&apos;s photo.

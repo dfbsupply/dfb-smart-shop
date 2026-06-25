@@ -26,8 +26,8 @@ import { useAsync } from 'src/hooks/use-async';
 import { fDateTime } from 'src/utils/format-time';
 import { geocodeAddress } from 'src/utils/geocode';
 
-import { fPeso, computeUnitPrice } from 'src/data/pricing';
 import { subscribeRiderLocation } from 'src/services/tracking';
+import { fPeso, formatItemSize, computeUnitPrice } from 'src/data/pricing';
 import { ORDER_STATUS_COLOR, RESERVATION_STATUS_LABEL } from 'src/data/status';
 import { fetchOrder, cancelOrder, fetchBranches, fetchOrderEvents } from 'src/services/db';
 
@@ -324,7 +324,7 @@ export function BuyerOrderDetailView() {
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2">{item.name}</Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                      {item.width} in × {item.height} in · Qty {item.qty}
+                      {formatItemSize(item.width, item.height)} · Qty {item.qty}
                     </Typography>
                     <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
                       {fPeso(item.unitPrice)}{' '}

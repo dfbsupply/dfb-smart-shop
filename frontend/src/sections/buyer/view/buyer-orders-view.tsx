@@ -104,7 +104,7 @@ export function BuyerOrdersView() {
               </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
                 {order.items
-                  .map((i) => `${i.name} ${i.width}×${i.height}`)
+                  .map((i) => (i.width > 0 ? `${i.name} ${i.width}×${i.height}` : i.name))
                   .join(' + ')}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1.5 }}>

@@ -13,7 +13,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { useAsync } from 'src/hooks/use-async';
 
-import { fPeso } from 'src/data/pricing';
+import { fPeso, formatItemSize } from 'src/data/pricing';
 import { fetchVisibleProducts, fetchRecommendations } from 'src/services/db';
 
 import { Iconify } from 'src/components/iconify';
@@ -81,7 +81,7 @@ export function StoreCartView() {
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2">{item.name}</Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                      {item.width} in × {item.height} in
+                      {formatItemSize(item.width, item.height)}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 0.5 }}>
                       {fPeso(item.unitPrice)} / unit

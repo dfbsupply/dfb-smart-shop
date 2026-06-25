@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 
 import { RouterLink } from 'src/routes/components';
 
-import { fPeso } from 'src/data/pricing';
+import { fPeso, formatItemSize } from 'src/data/pricing';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -54,7 +54,7 @@ export function StoreConfirmationView() {
               <Box>
                 <Typography variant="body2">{item.name}</Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {item.width}×{item.height} in · Qty {item.qty}
+                  {formatItemSize(item.width, item.height)} · Qty {item.qty}
                 </Typography>
               </Box>
               <Typography variant="body2">{fPeso(item.unitPrice * item.qty)}</Typography>

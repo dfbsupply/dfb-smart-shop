@@ -49,6 +49,24 @@ function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+// ----------------------------------------------------------------------
+// Sized vs flat products. Glass and aluminum profiles are priced by size with
+// the dynamic formula above (Objective 3). Hardware/accessories and screens are
+// sold per piece, so they skip the W×H calculator and just use base × qty.
+// ----------------------------------------------------------------------
+
+const SIZED_CATEGORIES = ['Glass', 'Aluminum Profiles'];
+
+export function isSizedCategory(category: string): boolean {
+  return SIZED_CATEGORIES.includes(category);
+}
+
+// Size label for a cart/order line — "24 in × 36 in" for sized items, or
+// "Per piece" for flat (width/height stored as 0).
+export function formatItemSize(width: number, height: number): string {
+  return width > 0 && height > 0 ? `${width} in × ${height} in` : 'Per piece';
+}
+
 // Philippine peso formatter (₱).
 const pesoFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',

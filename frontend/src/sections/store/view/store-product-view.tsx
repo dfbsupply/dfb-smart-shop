@@ -17,7 +17,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { useAsync } from 'src/hooks/use-async';
 
-import { fPeso, computeUnitPrice } from 'src/data/pricing';
+import { fPeso, isSizedCategory, computeUnitPrice } from 'src/data/pricing';
 import { getStockStatus, STOCK_STATUS_LABEL, STOCK_STATUS_COLOR } from 'src/data/status';
 import { fetchProduct, fetchVisibleProducts, fetchRecommendations } from 'src/services/db';
 
@@ -62,13 +62,16 @@ export function StoreProductView() {
 
   const w = Number(width);
   const h = Number(height);
+  // Glass / aluminum are priced by size; hardware & screens are flat per piece.
+  const sized = product ? isSizedCategory(product.category) : true;
   const dimsValid = !!width && !!height && !Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0;
-  // Live price: recomputes as the customer types — real-time (Objective 3).
-  const result = useMemo(
-    () =>
-      product && dimsValid ? computeUnitPrice({ base: product.basePrice, width: w, height: h }) : null,
-    [product, dimsValid, w, h]
-  );
+  // Live price: sized items recompute as the customer types (real-time,
+  // Objective 3); flat items are simply the base price.
+  const result = useMemo(() => {
+    if (!product) return null;
+    if (!sized) return computeUnitPrice({ base: product.basePrice, width: 0, height: 0 });
+    return dimsValid ? computeUnitPrice({ base: product.basePrice, width: w, height: h }) : null;
+  }, [product, sized, dimsValid, w, h]);
 
   if (loading) {
     return <LinearProgress sx={{ mt: 2 }} />;
@@ -101,8 +104,8 @@ export function StoreProductView() {
       name: product.name,
       image: product.images[0],
       basePrice: product.basePrice,
-      width: w,
-      height: h,
+      width: sized ? w : 0,
+      height: sized ? h : 0,
       qty: quantity,
       unitPrice: result.unit,
       source: referencePhoto ? 'visual_search' : 'manual',
@@ -175,26 +178,32 @@ export function StoreProductView() {
           </Typography>
 
           <Card sx={{ p: 3, bgcolor: 'background.neutral' }}>
-            <Typography variant="h6">Get Your Price</Typography>
+            <Typography variant="h6">{sized ? 'Get Your Price' : 'Add to Order'}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              Enter your measurements — the price updates instantly as you type.
+              {sized
+                ? 'Enter your measurements — the price updates instantly as you type.'
+                : 'Sold per piece — choose how many you need.'}
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                label="Width (inches)"
-                placeholder="e.g., 24"
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-              <TextField
-                label="Height (inches)"
-                placeholder="e.g., 36"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
+              {sized && (
+                <>
+                  <TextField
+                    label="Width (inches)"
+                    placeholder="e.g., 24"
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    label="Height (inches)"
+                    placeholder="e.g., 36"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </>
+              )}
               <TextField
                 label="Quantity"
                 type="number"
@@ -205,7 +214,7 @@ export function StoreProductView() {
               />
             </Box>
 
-            {!result && (
+            {sized && !result && (
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                 Enter a width and height greater than 0 to see your price.
               </Typography>
@@ -215,42 +224,53 @@ export function StoreProductView() {
               <Box sx={{ mt: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Estimated Price:
+                    {sized ? 'Estimated Price:' : 'Price:'}
                   </Typography>
                   <Typography variant="h4">{fPeso(result.unit * quantity)}</Typography>
-                  <Chip
-                    size="small"
-                    color="success"
-                    label="Live"
-                    icon={<Iconify icon="solar:bolt-bold" width={14} />}
-                  />
+                  {sized && (
+                    <Chip
+                      size="small"
+                      color="success"
+                      label="Live"
+                      icon={<Iconify icon="solar:bolt-bold" width={14} />}
+                    />
+                  )}
                 </Box>
 
-                <Button
-                  size="small"
-                  color="inherit"
-                  onClick={() => setShowBreakdown((v) => !v)}
-                  endIcon={
-                    <Iconify
-                      icon={showBreakdown ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-downward-fill'}
-                    />
-                  }
-                >
-                  See how this is computed
-                </Button>
-                <Collapse in={showBreakdown}>
-                  <Box sx={{ mt: 1 }}>
-                    <Row label="Base material" value={fPeso(result.base)} />
-                    <Row label="Surface area (W × H × 1.5)" value={fPeso(result.surface)} />
-                    <Row label="Frame / perimeter ((W + H) × 2)" value={fPeso(result.perimeter)} />
-                    <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
-                    <Row label={`Per unit total × ${quantity}`} value={fPeso(result.unit * quantity)} bold />
-                  </Box>
-                </Collapse>
+                {sized && (
+                  <>
+                    <Button
+                      size="small"
+                      color="inherit"
+                      onClick={() => setShowBreakdown((v) => !v)}
+                      endIcon={
+                        <Iconify
+                          icon={showBreakdown ? 'eva:arrow-ios-upward-fill' : 'eva:arrow-ios-downward-fill'}
+                        />
+                      }
+                    >
+                      See how this is computed
+                    </Button>
+                    <Collapse in={showBreakdown}>
+                      <Box sx={{ mt: 1 }}>
+                        <Row label="Base material" value={fPeso(result.base)} />
+                        <Row label="Surface area (W × H × 1.5)" value={fPeso(result.surface)} />
+                        <Row label="Frame / perimeter ((W + H) × 2)" value={fPeso(result.perimeter)} />
+                        <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
+                        <Row
+                          label={`Per unit total × ${quantity}`}
+                          value={fPeso(result.unit * quantity)}
+                          bold
+                        />
+                      </Box>
+                    </Collapse>
+                  </>
+                )}
 
                 <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 1 }}>
-                  This is an estimate. Final price is confirmed by the shop based on stock and
-                  finishing.
+                  {sized
+                    ? 'This is an estimate. Final price is confirmed by the shop based on stock and finishing.'
+                    : 'Final amount is confirmed by the shop based on stock.'}
                 </Typography>
 
                 <Button

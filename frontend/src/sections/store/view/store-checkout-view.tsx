@@ -16,9 +16,9 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import { fPeso } from 'src/data/pricing';
 import { placeOrder } from 'src/services/db';
 import { sendOrderEmail } from 'src/services/email';
+import { fPeso, formatItemSize } from 'src/data/pricing';
 
 import { useCart } from '../cart-context';
 import { saveLastOrder } from '../last-order';
@@ -246,7 +246,7 @@ export function StoreCheckoutView() {
                   <Box>
                     <Typography variant="body2">{item.name}</Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      {item.width}×{item.height} in · Qty {item.qty}
+                      {formatItemSize(item.width, item.height)} · Qty {item.qty}
                     </Typography>
                   </Box>
                   <Typography variant="body2">{fPeso(item.unitPrice * item.qty)}</Typography>

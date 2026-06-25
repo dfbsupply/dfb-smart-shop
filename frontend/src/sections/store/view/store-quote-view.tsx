@@ -16,7 +16,7 @@ import { RouterLink } from 'src/routes/components';
 import { useAsync } from 'src/hooks/use-async';
 
 import { fetchVisibleProducts } from 'src/services/db';
-import { fPeso, computeUnitPrice } from 'src/data/pricing';
+import { fPeso, isSizedCategory, computeUnitPrice } from 'src/data/pricing';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
@@ -45,14 +45,17 @@ export function StoreQuoteView() {
 
   const w = Number(width);
   const h = Number(height);
+  // Glass / aluminum price by size; hardware & screens are flat per piece.
+  const sized = product ? isSizedCategory(product.category) : true;
   const dimsValid = !!width && !!height && !Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0;
 
-  // Live price: recomputes on every change to product / width / height — no
-  // "calculate" button, so the quote is genuinely real-time (Objective 3).
-  const result = useMemo(
-    () => (product && dimsValid ? computeUnitPrice({ base: product.basePrice, width: w, height: h }) : null),
-    [product, dimsValid, w, h]
-  );
+  // Live price: sized items recompute on every change (real-time, Objective 3);
+  // flat items are simply the base price.
+  const result = useMemo(() => {
+    if (!product) return null;
+    if (!sized) return computeUnitPrice({ base: product.basePrice, width: 0, height: 0 });
+    return dimsValid ? computeUnitPrice({ base: product.basePrice, width: w, height: h }) : null;
+  }, [product, sized, dimsValid, w, h]);
 
   const handleAddToCart = () => {
     if (!product || !result) return;
@@ -61,8 +64,8 @@ export function StoreQuoteView() {
       name: product.name,
       image: product.images[0] ?? '',
       basePrice: product.basePrice,
-      width: w,
-      height: h,
+      width: sized ? w : 0,
+      height: sized ? h : 0,
       qty: quantity,
       unitPrice: result.unit,
       source: 'manual',
@@ -104,20 +107,24 @@ export function StoreQuoteView() {
             </TextField>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Width (inches)"
-                placeholder="e.g., 24"
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-              <TextField
-                label="Height (inches)"
-                placeholder="e.g., 36"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
+              {sized && (
+                <>
+                  <TextField
+                    label="Width (inches)"
+                    placeholder="e.g., 24"
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    label="Height (inches)"
+                    placeholder="e.g., 36"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </>
+              )}
               <TextField
                 label="Qty"
                 type="number"
@@ -131,9 +138,11 @@ export function StoreQuoteView() {
             <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', mt: 2 }}>
               {!product
                 ? 'Select a product to begin.'
-                : dimsValid
-                  ? 'Your estimate updates automatically on the right.'
-                  : 'Enter a width and height greater than 0 to see the price.'}
+                : !sized
+                  ? 'Sold per piece — your price is shown on the right.'
+                  : dimsValid
+                    ? 'Your estimate updates automatically on the right.'
+                    : 'Enter a width and height greater than 0 to see the price.'}
             </Typography>
           </Card>
         </Grid>
@@ -168,22 +177,28 @@ export function StoreQuoteView() {
                   <Chip
                     size="small"
                     color="success"
-                    label="Live estimate"
+                    label={sized ? 'Live estimate' : 'Per piece'}
                     icon={<Iconify icon="solar:bolt-bold" width={14} />}
                   />
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Estimated price:
+                    {sized ? 'Estimated price:' : 'Price:'}
                   </Typography>
                   <Typography variant="h4">{fPeso(result.unit * quantity)}</Typography>
                 </Box>
 
-                <Row label="Base material" value={fPeso(result.base)} />
-                <Row label="Surface area (W × H × 1.5)" value={fPeso(result.surface)} />
-                <Row label="Frame / perimeter ((W + H) × 2)" value={fPeso(result.perimeter)} />
-                <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
-                <Row label="Per unit" value={fPeso(result.unit)} bold />
+                {sized ? (
+                  <>
+                    <Row label="Base material" value={fPeso(result.base)} />
+                    <Row label="Surface area (W × H × 1.5)" value={fPeso(result.surface)} />
+                    <Row label="Frame / perimeter ((W + H) × 2)" value={fPeso(result.perimeter)} />
+                    <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
+                    <Row label="Per unit" value={fPeso(result.unit)} bold />
+                  </>
+                ) : (
+                  <Row label="Price per piece" value={fPeso(result.unit)} bold />
+                )}
                 <Row
                   label={`× ${quantity} unit${quantity > 1 ? 's' : ''}`}
                   value={fPeso(result.unit * quantity)}
@@ -191,7 +206,9 @@ export function StoreQuoteView() {
                 />
 
                 <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', mt: 1.5 }}>
-                  Estimate only — the shop confirms the final amount based on stock and finishing.
+                  {sized
+                    ? 'Estimate only — the shop confirms the final amount based on stock and finishing.'
+                    : 'The shop confirms the final amount based on stock.'}
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 1.5, mt: 2.5 }}>
