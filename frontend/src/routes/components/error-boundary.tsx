@@ -1,13 +1,31 @@
 import type { Theme, CSSObject } from '@mui/material/styles';
 
+import { useEffect } from 'react';
 import { useRouteError, isRouteErrorResponse } from 'react-router';
 
 import GlobalStyles from '@mui/material/GlobalStyles';
 
 // ----------------------------------------------------------------------
 
+// A failed dynamic import (stale hashed chunk after a deploy) shows up here —
+// reload once (guarded) to fetch the fresh build.
+function isChunkLoadError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error ?? '');
+  return /dynamically imported module|module script failed|Failed to fetch dynamically/i.test(msg);
+}
+
 export function ErrorBoundary() {
   const error = useRouteError();
+
+  useEffect(() => {
+    if (!isChunkLoadError(error)) return;
+    const KEY = 'chunk-reload-at';
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    if (Date.now() - last > 10000) {
+      sessionStorage.setItem(KEY, String(Date.now()));
+      window.location.reload();
+    }
+  }, [error]);
 
   return (
     <>
