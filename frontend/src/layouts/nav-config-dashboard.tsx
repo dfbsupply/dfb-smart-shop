@@ -38,6 +38,11 @@ export const navData: NavItem[] = [
     icon: icon('solar:magic-stick-3-bold-duotone'),
   },
   {
+    title: 'AI Accuracy Test',
+    path: '/admin/ai-accuracy',
+    icon: icon('solar:cpu-bolt-bold-duotone'),
+  },
+  {
     title: 'Reports',
     path: '/admin/reports',
     icon: icon('solar:chart-square-bold-duotone'),

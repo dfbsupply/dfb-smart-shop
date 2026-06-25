@@ -20,6 +20,7 @@ const InventoryPage = lazy(() => import('src/pages/admin/inventory'));
 const ProductFormPage = lazy(() => import('src/pages/admin/product-form'));
 const PromosPage = lazy(() => import('src/pages/admin/promos'));
 const RecommendationsPage = lazy(() => import('src/pages/admin/recommendations'));
+const AiAccuracyPage = lazy(() => import('src/pages/admin/ai-accuracy'));
 const ReportsPage = lazy(() => import('src/pages/admin/reports'));
 const SettingsPage = lazy(() => import('src/pages/admin/settings'));
 
@@ -44,6 +45,7 @@ export const adminRoutes: RouteObject[] = [
       { path: 'inventory/:id/edit', element: <ProductFormPage /> },
       { path: 'promos', element: <PromosPage /> },
       { path: 'recommendations', element: <RecommendationsPage /> },
+      { path: 'ai-accuracy', element: <AiAccuracyPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
