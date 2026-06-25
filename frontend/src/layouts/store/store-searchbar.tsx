@@ -13,18 +13,15 @@ import { useRouter } from 'src/routes/hooks';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useVisualSearch } from 'src/sections/store/visual-search';
-
 // ----------------------------------------------------------------------
 // Storefront nav search — type to search the catalog, or tap the camera
-// to search by photo (visual search).
+// to open the Visual Search page (search by photo).
 // ----------------------------------------------------------------------
 
 export function StoreSearchbar() {
   const theme = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
-  const visualSearch = useVisualSearch();
   const [query, setQuery] = useState('');
 
   const handleSearch = () => {
@@ -64,7 +61,7 @@ export function StoreSearchbar() {
       <Divider orientation="vertical" flexItem sx={{ my: 1, borderStyle: 'dashed' }} />
 
       <Tooltip title={t('search.byPhoto')}>
-        <IconButton onClick={visualSearch.open} size="small">
+        <IconButton onClick={() => router.push('/visual-search')} size="small">
           <Iconify icon="solar:camera-bold" width={20} sx={{ color: 'primary.main' }} />
         </IconButton>
       </Tooltip>
