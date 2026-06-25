@@ -24,6 +24,7 @@ export type Product = {
   name: string;
   category: ProductCategory;
   description: string;
+  dimensions?: string; // free-text size/dimensions spec (e.g. "Panel 36 × 84 in")
   basePrice: number; // P_base, feeds the price calculator
   stockQty: number;
   lowStockThreshold: number;

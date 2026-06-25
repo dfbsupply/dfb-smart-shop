@@ -142,6 +142,7 @@ create table public.products (
   name                      text not null,
   category                  product_category not null,
   description               text not null default '',
+  dimensions                text,                          -- free-text size/dimensions spec
   base_price                numeric(12,2) not null check (base_price >= 0), -- P_base
   stock_qty                 integer not null default 0 check (stock_qty >= 0),
   low_stock_threshold       integer not null default 10 check (low_stock_threshold >= 0),
@@ -485,6 +486,16 @@ values
   ('11111111-1111-1111-1111-000000000008','Aluminum Mosquito Screen Frame','Screens',
    'Pre-cut screen frame kit with corner connectors.',350,4,6,
    '{/assets/images/product/product-8.webp}','{screen,frame,aluminum,window,mosquito}',false,true);
+
+-- Size / dimensions specs (shown on the storefront).
+update public.products set dimensions = 'Cut to size — sheets up to 96 × 130 in' where name = 'Clear Float Glass 5mm';
+update public.products set dimensions = 'Cut to size — sheets up to 84 × 130 in' where name = 'Tinted Bronze Glass 6mm';
+update public.products set dimensions = 'Standard bar length 21 ft (6.4 m)'      where name = 'Aluminum Sliding Profile';
+update public.products set dimensions = 'Standard bar length 21 ft (6.4 m)'      where name = 'Aluminum Casement Profile';
+update public.products set dimensions = 'Fits 798 & 900 series sliding windows'  where name = 'Window Lock Set';
+update public.products set dimensions = 'Lever handle, ~120 mm'                  where name = 'Stainless Door Handle';
+update public.products set dimensions = 'Panel 36 × 84 in (charcoal mesh)'       where name = 'Fiberglass Window Screen';
+update public.products set dimensions = 'Pre-cut kit, up to 48 × 48 in'          where name = 'Aluminum Mosquito Screen Frame';
 
 -- ---------------------------------------------------------------------------
 -- Recommendations (frequently bought together — A-8)

@@ -26,6 +26,7 @@ export function mapProduct(db: DbProduct): Product {
     name: db.name,
     category: db.category,
     description: db.description,
+    dimensions: db.dimensions ?? undefined,
     basePrice: db.base_price,
     stockQty: db.stock_qty,
     lowStockThreshold: db.low_stock_threshold,

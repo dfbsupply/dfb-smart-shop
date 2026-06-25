@@ -173,9 +173,31 @@ export function StoreProductView() {
           <Typography variant="h6" sx={{ color: 'text.secondary', my: 1 }}>
             Base Price: {fPeso(product.basePrice)}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: product.dimensions ? 1.5 : 3 }}>
             {product.description}
           </Typography>
+
+          {product.dimensions && (
+            <Box
+              sx={{
+                mb: 3,
+                p: 1.5,
+                borderRadius: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                bgcolor: 'background.neutral',
+              }}
+            >
+              <Iconify icon="solar:ruler-bold" width={20} sx={{ color: 'text.secondary' }} />
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                  Size / Dimensions
+                </Typography>
+                <Typography variant="body2">{product.dimensions}</Typography>
+              </Box>
+            </Box>
+          )}
 
           <Card sx={{ p: 3, bgcolor: 'background.neutral' }}>
             <Typography variant="h6">{sized ? 'Get Your Price' : 'Add to Order'}</Typography>

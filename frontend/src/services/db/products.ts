@@ -14,6 +14,7 @@ export type ProductInput = {
   name: string;
   category: ProductCategory;
   description: string;
+  dimensions: string;
   basePrice: number;
   stockQty: number;
   lowStockThreshold: number;
@@ -28,6 +29,7 @@ function toRow(input: ProductInput) {
     name: input.name,
     category: input.category,
     description: input.description,
+    dimensions: input.dimensions.trim() || null,
     base_price: input.basePrice,
     stock_qty: input.stockQty,
     low_stock_threshold: input.lowStockThreshold,

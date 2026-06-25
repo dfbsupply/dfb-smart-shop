@@ -39,6 +39,7 @@ type FormState = {
   name: string;
   category: ProductCategory;
   description: string;
+  dimensions: string;
   basePrice: string;
   stockQty: string;
   lowStockThreshold: string;
@@ -52,6 +53,7 @@ const EMPTY: FormState = {
   name: '',
   category: 'Glass',
   description: '',
+  dimensions: '',
   basePrice: '',
   stockQty: '',
   lowStockThreshold: '5',
@@ -101,6 +103,7 @@ export function ProductFormView() {
       name: existing.name,
       category: existing.category,
       description: existing.description,
+      dimensions: existing.dimensions ?? '',
       basePrice: String(existing.basePrice),
       stockQty: String(existing.stockQty),
       lowStockThreshold: String(existing.lowStockThreshold),
@@ -132,6 +135,7 @@ export function ProductFormView() {
       name: form.name.trim(),
       category: form.category,
       description: form.description,
+      dimensions: form.dimensions,
       basePrice: Number(form.basePrice),
       stockQty: Number(form.stockQty || 0),
       lowStockThreshold: Number(form.lowStockThreshold || 0),
@@ -219,6 +223,16 @@ export function ProductFormView() {
                 label="Description"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+
+              <TextField
+                fullWidth
+                label="Size / Dimensions"
+                placeholder="e.g., Panel 36 × 84 in · or Sheet up to 96 × 130 in"
+                value={form.dimensions}
+                onChange={(e) => set('dimensions', e.target.value)}
+                helperText="Shown on the product page and product cards."
                 slotProps={{ inputLabel: { shrink: true } }}
               />
 

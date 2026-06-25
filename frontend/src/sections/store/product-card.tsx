@@ -11,6 +11,7 @@ import { fPeso } from 'src/data/pricing';
 import { getStockStatus, STOCK_STATUS_LABEL, STOCK_STATUS_COLOR } from 'src/data/status';
 
 import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -51,6 +52,16 @@ export function StoreProductCard({ product }: { product: Product }) {
         <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
           {product.category}
         </Typography>
+        {product.dimensions && (
+          <Typography
+            variant="caption"
+            sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}
+            noWrap
+          >
+            <Iconify icon="solar:ruler-bold" width={14} />
+            {product.dimensions}
+          </Typography>
+        )}
 
         <Box sx={{ flex: 1 }} />
 

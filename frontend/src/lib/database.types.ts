@@ -19,6 +19,7 @@ export interface Product {
   name: string;
   category: ProductCategory;
   description: string;
+  dimensions: string | null;
   base_price: number;
   stock_qty: number;
   low_stock_threshold: number;
