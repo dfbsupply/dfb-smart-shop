@@ -27,6 +27,8 @@ import { getStockStatus, ORDER_STATUS_LABEL } from 'src/data/status';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { printReport } from '../print-report';
+
 // ----------------------------------------------------------------------
 // A-9. Reports — the digital replacement for the manual logbook.
 // ----------------------------------------------------------------------
@@ -116,18 +118,46 @@ function buildReport(type: ReportType, orders: Order[], products: Product[]): Re
   }
 }
 
-function exportCsv(report: ReportTable, name: string) {
-  const lines = [report.columns, ...report.rows]
+// Keep only orders whose created date falls within the selected range. An
+// empty bound means "no limit" on that side. Reports that aren't order-based
+// (e.g. Low Stock) ignore this and read the live product list.
+function filterOrdersByDate(orders: Order[], from: string, to: string): Order[] {
+  if (!from && !to) return orders;
+  const fromT = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
+  const toT = to ? new Date(`${to}T23:59:59.999`).getTime() : Infinity;
+  return orders.filter((o) => {
+    const t = new Date(o.createdAt).getTime();
+    return t >= fromT && t <= toT;
+  });
+}
+
+function rangeLabel(from: string, to: string): string {
+  if (from && to) return `${from} to ${to}`;
+  if (from) return `From ${from}`;
+  if (to) return `Up to ${to}`;
+  return 'All dates';
+}
+
+function exportCsv(report: ReportTable, meta: ReportMeta) {
+  const header = [
+    [meta.label],
+    [`Date range: ${rangeLabel(meta.from, meta.to)}`],
+    [`Generated: ${meta.generatedAt}`],
+    [],
+  ];
+  const lines = [...header, report.columns, ...report.rows]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     .join('\n');
-  const blob = new Blob([lines], { type: 'text/csv' });
+  const blob = new Blob([lines], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${name}.csv`;
+  a.download = `${meta.label.replace(/\s+/g, '-').toLowerCase()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
+
+type ReportMeta = { label: string; from: string; to: string; generatedAt: string };
 
 export function ReportsView() {
   const { data, loading } = useAsync(async () => {
@@ -139,8 +169,15 @@ export function ReportsView() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [report, setReport] = useState<ReportTable | null>(null);
+  const [meta, setMeta] = useState<ReportMeta | null>(null);
 
   const label = REPORT_OPTIONS.find((r) => r.value === type)!.label;
+
+  const handleGenerate = () => {
+    const orders = filterOrdersByDate(data?.orders ?? [], from, to);
+    setReport(buildReport(type, orders, data?.products ?? []));
+    setMeta({ label, from, to, generatedAt: new Date().toLocaleString() });
+  };
 
   return (
     <DashboardContent>
@@ -197,7 +234,7 @@ export function ReportsView() {
               color="inherit"
               startIcon={<Iconify icon="solar:chart-2-bold" />}
               disabled={loading}
-              onClick={() => setReport(buildReport(type, data?.orders ?? [], data?.products ?? []))}
+              onClick={handleGenerate}
             >
               Generate
             </Button>
@@ -205,17 +242,18 @@ export function ReportsView() {
         </Grid>
       </Card>
 
-      {report && (
+      {report && meta && (
         <Card>
           <CardHeader
-            title={label}
+            title={meta.label}
+            subheader={`Date range: ${rangeLabel(meta.from, meta.to)}`}
             action={
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   size="small"
                   color="inherit"
                   startIcon={<Iconify icon="solar:export-bold" />}
-                  onClick={() => exportCsv(report, label.replace(/\s+/g, '-').toLowerCase())}
+                  onClick={() => exportCsv(report, meta)}
                 >
                   Export CSV
                 </Button>
@@ -223,7 +261,15 @@ export function ReportsView() {
                   size="small"
                   color="inherit"
                   startIcon={<Iconify icon="solar:printer-bold" />}
-                  onClick={() => window.print()}
+                  onClick={() =>
+                    printReport({
+                      title: meta.label,
+                      columns: report.columns,
+                      rows: report.rows,
+                      rangeLabel: rangeLabel(meta.from, meta.to),
+                      generatedAt: meta.generatedAt,
+                    })
+                  }
                 >
                   Print
                 </Button>

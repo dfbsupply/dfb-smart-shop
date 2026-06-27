@@ -33,7 +33,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
 
   const pathname = usePathname();
 
-  const { signOut } = useAuth();
+  const { requestSignOut } = useAuth();
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -137,10 +137,9 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
             color="error"
             size="medium"
             variant="text"
-            onClick={async () => {
+            onClick={() => {
               handleClosePopover();
-              await signOut();
-              router.push('/login');
+              requestSignOut();
             }}
           >
             Sign Out

@@ -11,22 +11,18 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { useRouter } from 'src/routes/hooks';
-
 import { useAuth } from 'src/auth';
 import { updateProfile } from 'src/services/db';
 
 import { useToast } from 'src/components/toast';
 import { Iconify } from 'src/components/iconify';
-import { ConfirmDialog } from 'src/components/confirm-dialog';
 
 // ----------------------------------------------------------------------
 // B-7. Profile / Account Settings — account management (Objective 1).
 // ----------------------------------------------------------------------
 
 export function BuyerProfileView() {
-  const router = useRouter();
-  const { user, profile: authProfile, signIn, updatePassword, signOut } = useAuth();
+  const { user, profile: authProfile, signIn, updatePassword, requestSignOut } = useAuth();
   const { showToast, toast } = useToast();
 
   const [profile, setProfile] = useState<{
@@ -39,7 +35,6 @@ export function BuyerProfileView() {
   const [showPassword, setShowPassword] = useState(false);
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [changingPw, setChangingPw] = useState(false);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -229,24 +224,10 @@ export function BuyerProfileView() {
         color="error"
         variant="outlined"
         startIcon={<Iconify icon="solar:logout-3-bold" />}
-        onClick={() => setConfirmSignOut(true)}
+        onClick={requestSignOut}
       >
         Sign Out
       </Button>
-
-      <ConfirmDialog
-        open={confirmSignOut}
-        title="Sign out of your account?"
-        content="You'll need to sign in again to see your orders."
-        confirmLabel="Sign Out"
-        cancelLabel="Stay"
-        confirmColor="error"
-        onClose={() => setConfirmSignOut(false)}
-        onConfirm={async () => {
-          await signOut();
-          router.push('/login');
-        }}
-      />
 
       {toast}
     </Box>

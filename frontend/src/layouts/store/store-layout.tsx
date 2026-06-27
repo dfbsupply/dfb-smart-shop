@@ -61,7 +61,7 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { count } = useCart();
   const { startTour } = useStoreTour();
-  const { session, profile, isAdmin, signOut } = useAuth();
+  const { session, profile, isAdmin, requestSignOut } = useAuth();
   const [openDrawer, setOpenDrawer] = useState(false);
   const [accountEl, setAccountEl] = useState<HTMLElement | null>(null);
 
@@ -120,9 +120,9 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
             )}
             <Divider />
             <MenuItem
-              onClick={async () => {
+              onClick={() => {
                 setAccountEl(null);
-                await signOut();
+                requestSignOut();
               }}
               sx={{ color: 'error.main' }}
             >
@@ -244,9 +244,9 @@ export function StoreLayout({ children }: { children: React.ReactNode }) {
                   )}
                   <ListItem disablePadding>
                     <ListItemButton
-                      onClick={async () => {
+                      onClick={() => {
                         setOpenDrawer(false);
-                        await signOut();
+                        requestSignOut();
                       }}
                       sx={{ color: 'error.main' }}
                     >

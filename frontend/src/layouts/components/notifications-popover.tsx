@@ -1,6 +1,6 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -16,6 +16,8 @@ import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
+
+import { RouterLink } from 'src/routes/components';
 
 import { fToNow } from 'src/utils/format-time';
 
@@ -36,10 +38,21 @@ type NotificationItemProps = {
 
 export type NotificationsPopoverProps = IconButtonProps & {
   data?: NotificationItemProps[];
+  viewAllHref?: string;
 };
 
-export function NotificationsPopover({ data = [], sx, ...other }: NotificationsPopoverProps) {
+export function NotificationsPopover({
+  data = [],
+  viewAllHref,
+  sx,
+  ...other
+}: NotificationsPopoverProps) {
   const [notifications, setNotifications] = useState(data);
+
+  // Keep in sync when the parent loads data asynchronously (e.g. real orders).
+  useEffect(() => {
+    setNotifications(data);
+  }, [data]);
 
   const totalUnRead = notifications.filter((item) => item.isUnRead === true).length;
 
@@ -104,7 +117,7 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="subtitle1">Notifications</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              You have {totalUnRead} unread messages
+              You have {totalUnRead} unread notifications
             </Typography>
           </Box>
 
@@ -150,7 +163,13 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
         <Divider sx={{ borderStyle: 'dashed' }} />
 
         <Box sx={{ p: 1 }}>
-          <Button fullWidth disableRipple color="inherit">
+          <Button
+            fullWidth
+            disableRipple
+            color="inherit"
+            {...(viewAllHref && { component: RouterLink, href: viewAllHref })}
+            onClick={handleClosePopover}
+          >
             View all
           </Button>
         </Box>

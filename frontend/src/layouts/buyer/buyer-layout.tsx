@@ -45,7 +45,7 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile, requestSignOut } = useAuth();
 
   // Highlight the deepest matching nav item.
   const activeValue =
@@ -150,7 +150,7 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
         <Iconify
           icon="solar:logout-2-bold-duotone"
           width={22}
-          onClick={() => signOut()}
+          onClick={requestSignOut}
           sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'error.main' } }}
         />
       </Box>

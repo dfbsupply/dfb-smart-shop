@@ -45,7 +45,7 @@ export function StoreProductCard({ product }: { product: Product }) {
         </Label>
       </Box>
 
-      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2 }, display: 'flex', flexDirection: 'column', flex: 1 }}>
         <Typography variant="subtitle2" noWrap>
           {product.name}
         </Typography>
@@ -65,12 +65,22 @@ export function StoreProductCard({ product }: { product: Product }) {
 
         <Box sx={{ flex: 1 }} />
 
-        <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ flexGrow: 1 }}>
+        <Box
+          sx={{
+            mt: 1.5,
+            gap: 1,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+          }}
+        >
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Starts at
             </Typography>
-            <Typography variant="subtitle1">{fPeso(product.basePrice)}</Typography>
+            <Typography variant="subtitle1" noWrap>
+              {fPeso(product.basePrice)}
+            </Typography>
           </Box>
           <Button
             component={RouterLink}
@@ -78,6 +88,7 @@ export function StoreProductCard({ product }: { product: Product }) {
             variant="outlined"
             color="inherit"
             size="small"
+            sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
           >
             View Item
           </Button>

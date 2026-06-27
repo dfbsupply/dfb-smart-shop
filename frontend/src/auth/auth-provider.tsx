@@ -5,6 +5,8 @@ import { useMemo, useState, useEffect, useContext, useCallback, createContext } 
 
 import { supabase } from 'src/lib/supabase';
 
+import { ConfirmDialog } from 'src/components/confirm-dialog';
+
 // ----------------------------------------------------------------------
 // Auth context — the single source of truth for the signed-in user.
 // Wraps Supabase Auth: tracks the session, the buyer profile, and whether
@@ -29,6 +31,7 @@ type AuthContextValue = {
   sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  requestSignOut: () => void; // opens a global "Sign out?" confirm dialog
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -57,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [metaUserId, setMetaUserId] = useState<string | null>(null);
+  const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -138,6 +142,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const requestSignOut = useCallback(() => setConfirmSignOutOpen(true), []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       loading,
@@ -151,9 +157,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendPasswordReset,
       updatePassword,
       signOut,
+      requestSignOut,
     }),
-    [loading, session, profile, isAdmin, metaUserId, signIn, signUp, sendPasswordReset, updatePassword, signOut]
+    [loading, session, profile, isAdmin, metaUserId, signIn, signUp, sendPasswordReset, updatePassword, signOut, requestSignOut]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <ConfirmDialog
+        open={confirmSignOutOpen}
+        title="Sign out?"
+        content="You'll need to sign in again to access your account."
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        confirmColor="error"
+        onClose={() => setConfirmSignOutOpen(false)}
+        onConfirm={() => {
+          void signOut();
+        }}
+      />
+    </AuthContext.Provider>
+  );
 }

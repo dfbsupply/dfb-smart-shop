@@ -6,8 +6,6 @@ import { useBoolean } from 'minimal-shared/hooks';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
-import { _langs, _notifications } from 'src/_mock';
-
 import { NavMobile, NavDesktop } from './nav';
 import { layoutClasses } from '../core/classes';
 import { _account } from '../nav-config-account';
@@ -20,8 +18,8 @@ import { MenuButton } from '../components/menu-button';
 import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountPopover } from '../components/account-popover';
-import { LanguagePopover } from '../components/language-popover';
-import { NotificationsPopover } from '../components/notifications-popover';
+import { LanguageSwitcher } from '../components/language-switcher';
+import { AdminNotifications } from '../components/admin-notifications';
 
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
@@ -73,11 +71,11 @@ export function DashboardLayout({
           {/** @slot Searchbar */}
           <Searchbar />
 
-          {/** @slot Language popover */}
-          <LanguagePopover data={_langs} />
+          {/** @slot Language switcher (English / Filipino, wired to i18n) */}
+          <LanguageSwitcher />
 
-          {/** @slot Notifications popover */}
-          <NotificationsPopover data={_notifications} />
+          {/** @slot Notifications popover (real recent orders) */}
+          <AdminNotifications />
 
           {/** @slot Account drawer */}
           <AccountPopover data={_account} />
