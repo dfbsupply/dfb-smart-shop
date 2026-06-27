@@ -9,7 +9,8 @@ import { fPeso, formatItemSize, computeUnitPrice } from 'src/data/pricing';
 // Print Order Slip — opens a clean, self-contained print document in a new
 // window (so the dashboard chrome, sidebar and edit controls are never
 // printed). The letterhead mirrors the physical DFB business card: a coral
-// header band with the green "DFB" logo badge, full contact details, then the
+// header band with the DFB logo image (same artwork as the favicon), full
+// contact details, then the
 // order, item breakdown and signature lines.
 // ----------------------------------------------------------------------
 
@@ -118,12 +119,11 @@ export function printOrderSlip(order: Order): void {
       color: #fff; padding: 16px 20px; border-radius: 8px 8px 0 0;
     }
     .badge {
-      flex: 0 0 auto; width: 78px; height: 52px; border-radius: 50%;
-      background: linear-gradient(135deg, #6FBF4E 0%, ${BRAND.greenDark} 100%);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 22px; letter-spacing: 1px;
-      border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+      flex: 0 0 auto; width: 76px; height: 56px; border-radius: 10px;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      padding: 5px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
     }
+    .badge img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
     .head .biz { font-size: 18px; font-weight: 800; letter-spacing: .5px; }
     .head .tag { font-size: 11px; opacity: .95; }
 
@@ -202,7 +202,7 @@ export function printOrderSlip(order: Order): void {
 <body>
   <div class="sheet">
     <div class="head">
-      <div class="badge">DFB</div>
+      <div class="badge"><img src="/apple-touch-icon.png" alt="DFB" /></div>
       <div>
         <div class="biz">${esc(BUSINESS.name)}</div>
         <div class="tag">Sliding &amp; swing windows · doors · tempered glass · shower enclosures · showcase</div>

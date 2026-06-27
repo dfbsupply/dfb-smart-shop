@@ -101,8 +101,8 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
         borderRight: `1px solid ${theme.vars.palette.divider}`,
       }}
     >
-      <Box sx={{ px: 3, py: 3 }}>
-        <Logo />
+      <Box sx={{ px: 2.5, py: 3 }}>
+        <Logo isSingle={false} href="/buyer" />
       </Box>
 
       <List sx={{ px: 2, flex: '1 1 auto' }}>

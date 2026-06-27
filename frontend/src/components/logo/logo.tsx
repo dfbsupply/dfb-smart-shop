@@ -11,10 +11,13 @@ import { RouterLink } from 'src/routes/components';
 import { logoClasses } from './classes';
 
 // ----------------------------------------------------------------------
-// DFB Smart Shop logo. `isSingle` (default) renders just the green "DFB"
-// oval mark — modelled on the DFB Glass & Aluminum Supply business card;
-// otherwise it adds the "DFB Smart Shop" wordmark beside it.
+// DFB Smart Shop logo. Renders the actual DFB logo image from /public.
+// `isSingle` (default) shows just the logo mark; otherwise it adds the
+// "DFB Smart Shop" wordmark beside it.
 // ----------------------------------------------------------------------
+
+// The DFB oval logo lives in /public (same artwork as the favicon set).
+const LOGO_SRC = '/apple-touch-icon.png';
 
 export type LogoProps = LinkProps & {
   isSingle?: boolean;
@@ -39,38 +42,20 @@ export function Logo({
       sx={[
         {
           height: 40,
-          width: isSingle ? 58 : 'auto',
+          width: isSingle ? 40 : 'auto',
           ...(disabled && { pointerEvents: 'none' }),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
       {...other}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-        {/* Green "DFB" oval — mirrors the logo on the business card. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box
-          sx={{
-            width: 58,
-            height: 40,
-            flexShrink: 0,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'common.white',
-            fontWeight: 800,
-            fontSize: 17,
-            fontStyle: 'italic',
-            letterSpacing: '0.5px',
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            textShadow: '0 1px 1px rgba(0,0,0,0.35)',
-            background: (theme) =>
-              `linear-gradient(160deg, ${theme.vars.palette.primary.light} 0%, ${theme.vars.palette.primary.main} 55%, ${theme.vars.palette.primary.darker} 100%)`,
-            boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.45)',
-          }}
-        >
-          DFB
-        </Box>
+          component="img"
+          src={LOGO_SRC}
+          alt="DFB"
+          sx={{ width: 40, height: 40, flexShrink: 0, objectFit: 'contain' }}
+        />
         {!isSingle && (
           <Box
             component="span"

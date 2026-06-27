@@ -109,7 +109,7 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
 
   return (
     <>
-      <Logo href="/admin" sx={{ mb: 2 }} />
+      <Logo isSingle={false} href="/admin" sx={{ mb: 2 }} />
 
       {slots?.topArea}
 
