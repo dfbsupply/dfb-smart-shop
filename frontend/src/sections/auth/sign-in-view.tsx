@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
@@ -15,27 +16,37 @@ import { RouterLink } from 'src/routes/components';
 import { useAuth } from 'src/auth';
 import { supabase } from 'src/lib/supabase';
 
+import { Logo } from 'src/components/logo';
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
-// A-1. Admin Sign In — Supabase Auth + admin-role gate (Objective 4).
-// Signs in, then confirms the account is an admin via the is_admin() RPC.
-// A non-admin who knows a valid buyer password is signed back out.
+// Unified Sign In — the single source of truth for authentication.
+// One form for everyone. After Supabase auth we read the account's role via
+// the is_admin() RPC and send the user to the matching panel:
+//   admin  → /admin   (owner back-office)
+//   buyer  → /buyer   (customer account app)
+// The role decides the destination, not which page the user started on, so an
+// owner who signs in here still lands in the admin panel.
 // ----------------------------------------------------------------------
 
-const ADMIN_EMAIL = 'owner@dfbsmartshop.com';
-
-export function AdminSignInView() {
+export function SignInView() {
   const router = useRouter();
-  const { signIn, signOut } = useAuth();
+  const { signIn, session, isAdmin, metaUserId, loading: authLoading } = useAuth();
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = useCallback(async () => {
+  // Already signed in (e.g. returning to /login) → bounce to the right panel.
+  useEffect(() => {
+    if (authLoading || !session) return;
+    if (metaUserId !== session.user.id) return; // role not resolved yet
+    router.replace(isAdmin ? '/admin' : '/buyer');
+  }, [authLoading, session, isAdmin, metaUserId, router]);
+
+  const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Please enter your email and password.');
       return;
@@ -50,33 +61,19 @@ export function AdminSignInView() {
       return;
     }
 
-    // Confirm admin privileges before entering the back-office.
-    const { data: isAdmin } = await supabase.rpc('is_admin');
-    if (isAdmin !== true) {
-      await signOut();
-      setError('This account is not authorized for admin access.');
-      setLoading(false);
-      return;
-    }
-
+    // Read the role straight from the source of truth, then route accordingly.
+    const { data: admin } = await supabase.rpc('is_admin');
     setLoading(false);
-    router.push('/admin');
-  }, [email, password, signIn, signOut, router]);
+    router.replace(admin === true ? '/admin' : '/buyer');
+  };
 
   return (
-    <>
-      <Box
-        sx={{
-          gap: 1.5,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          mb: 5,
-        }}
-      >
-        <Typography variant="h5">DFB Smart Shop — Admin</Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Sign in to manage inventory and orders.
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Logo sx={{ mx: 'auto', mb: 3 }} />
+        <Typography variant="h4">Welcome Back</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+          Sign in to your account to continue.
         </Typography>
       </Box>
 
@@ -92,26 +89,21 @@ export function AdminSignInView() {
           e.preventDefault();
           handleSignIn();
         }}
-        sx={{ display: 'flex', flexDirection: 'column' }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
       >
         <TextField
           fullWidth
-          name="email"
-          label="Admin Email"
+          label="Email Address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          sx={{ mb: 3 }}
           slotProps={{ inputLabel: { shrink: true } }}
         />
-
         <TextField
           fullWidth
-          name="password"
+          type={showPassword ? 'text' : 'password'}
           label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          type={showPassword ? 'text' : 'password'}
           slotProps={{
             inputLabel: { shrink: true },
             input: {
@@ -124,37 +116,33 @@ export function AdminSignInView() {
               ),
             },
           }}
-          sx={{ mb: 3 }}
         />
-
-        <Button
-          fullWidth
-          size="large"
-          type="submit"
-          color="inherit"
-          variant="contained"
-          loading={loading}
-        >
-          Sign In
-        </Button>
-
         <Link
           component={RouterLink}
-          href="/login/admin/forgot-password"
+          href="/login/forgot-password"
           variant="body2"
           color="inherit"
-          sx={{ mt: 2, alignSelf: 'center' }}
+          sx={{ alignSelf: 'flex-end' }}
         >
           Forgot password?
         </Link>
+        <Button fullWidth size="large" type="submit" variant="contained" loading={loading}>
+          Sign In
+        </Button>
       </Box>
 
-      <Typography
-        variant="caption"
-        sx={{ mt: 3, display: 'block', textAlign: 'center', color: 'text.secondary' }}
+      <Divider sx={{ my: 3, typography: 'body2', color: 'text.disabled' }}>New here?</Divider>
+
+      <Button
+        fullWidth
+        size="large"
+        variant="outlined"
+        color="inherit"
+        component={RouterLink}
+        href="/login/register"
       >
-        Authorized staff only.
-      </Typography>
-    </>
+        Create an Account
+      </Button>
+    </Box>
   );
 }

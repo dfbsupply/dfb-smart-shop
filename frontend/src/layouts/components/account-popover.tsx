@@ -140,7 +140,7 @@ export function AccountPopover({ data = [], sx, ...other }: AccountPopoverProps)
             onClick={async () => {
               handleClosePopover();
               await signOut();
-              router.push('/login/admin');
+              router.push('/login');
             }}
           >
             Sign Out

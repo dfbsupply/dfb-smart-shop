@@ -9,7 +9,7 @@ export default function Page() {
     <>
       <title>{`Reset Password - ${CONFIG.appName}`}</title>
 
-      <ForgotPasswordView signInHref="/login/admin" />
+      <ForgotPasswordView signInHref="/login" />
     </>
   );
 }

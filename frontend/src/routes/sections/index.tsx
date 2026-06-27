@@ -15,7 +15,7 @@ const RiderTrackPage = lazy(() => import('src/pages/track'));
 //   store  → public webshop          (/, /catalog, /product/:id, …)
 //   admin  → owner back-office        (/admin, /admin/orders, …)
 //   buyer  → client account app      (/buyer, /buyer/orders, …)
-//   auth   → sign-in / register / reset (/login, /login/register, /login/admin, …)
+//   auth   → unified sign-in / register / reset (/login, /login/register, …)
 // ----------------------------------------------------------------------
 
 export const routesSection: RouteObject[] = [

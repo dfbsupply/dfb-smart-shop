@@ -1,6 +1,6 @@
 import { CONFIG } from 'src/config-global';
 
-import { BuyerSignInView } from 'src/sections/auth';
+import { SignInView } from 'src/sections/auth';
 
 // ----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ export default function Page() {
     <>
       <title>{`Sign In - ${CONFIG.appName}`}</title>
 
-      <BuyerSignInView />
+      <SignInView />
     </>
   );
 }
