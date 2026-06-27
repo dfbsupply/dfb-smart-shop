@@ -122,7 +122,7 @@ export function LiveTrackMap({ rider, destination = null, height = 280, onEta }:
     const draw = (latlngs: [number, number][], dashed: boolean) => {
       if (!routeRef.current) {
         routeRef.current = L.polyline(latlngs, {
-          color: '#1877F2',
+          color: '#03412D', // DFB brand green (matches theme primary)
           weight: 4,
           opacity: dashed ? 0.45 : 0.85,
           dashArray: dashed ? '6,8' : undefined,

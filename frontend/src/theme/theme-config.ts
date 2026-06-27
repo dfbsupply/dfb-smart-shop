@@ -37,12 +37,13 @@ export const themeConfig: ThemeConfig = {
    * Palette
    *************************************** */
   palette: {
+    // DFB brand green — deep pine green (#03412D) as the primary brand color.
     primary: {
-      lighter: '#D0ECFE',
-      light: '#73BAFB',
-      main: '#1877F2',
-      dark: '#0C44AE',
-      darker: '#042174',
+      lighter: '#CDE5DC',
+      light: '#4E9E81',
+      main: '#03412D',
+      dark: '#022E20',
+      darker: '#011B13',
       contrastText: '#FFFFFF',
     },
     secondary: {

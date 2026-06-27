@@ -44,6 +44,8 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { ConfirmDialog } from 'src/components/confirm-dialog';
 
+import { printOrderSlip } from '../print-order-slip';
+
 // ----------------------------------------------------------------------
 // A-4. Order Detail (Admin View) — full price breakdown + manual status.
 // ----------------------------------------------------------------------
@@ -410,7 +412,7 @@ export function OrderDetailView() {
                 variant="outlined"
                 color="inherit"
                 startIcon={<Iconify icon="solar:printer-bold" />}
-                onClick={() => window.print()}
+                onClick={() => printOrderSlip(order)}
               >
                 Print Order Slip
               </Button>
