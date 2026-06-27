@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
+import Badge from '@mui/material/Badge';
 import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
@@ -11,6 +12,8 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 
 import { RouterLink } from 'src/routes/components';
 import { useRouter, usePathname } from 'src/routes/hooks';
+
+import { useUnreadNotifications } from 'src/hooks/use-unread-notifications';
 
 import { useAuth } from 'src/auth';
 
@@ -45,13 +48,27 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const { profile, requestSignOut } = useAuth();
+  const { user, profile, requestSignOut } = useAuth();
+  const unread = useUnreadNotifications(user?.id);
 
   // Highlight the deepest matching nav item.
   const activeValue =
     NAV_ITEMS.filter((item) => pathname === item.value || pathname.startsWith(`${item.value}/`)).sort(
       (a, b) => b.value.length - a.value.length
     )[0]?.value ?? false;
+
+  // Nav icon, badged with the live unread count on the Alerts item.
+  const navIcon = (item: (typeof NAV_ITEMS)[number]) => {
+    const icon = <Iconify icon={item.icon} width={24} />;
+    if (item.value === '/buyer/notifications' && unread > 0) {
+      return (
+        <Badge badgeContent={unread} color="error">
+          {icon}
+        </Badge>
+      );
+    }
+    return icon;
+  };
 
   // ----- Auth pages: clean, centered single column (no navigation) ----------
   if (hideBottomNav) {
@@ -120,7 +137,7 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
                 fontWeight: selected ? 600 : 500,
               }}
             >
-              <Iconify icon={item.icon} width={24} sx={{ mr: 2 }} />
+              <Box sx={{ mr: 2, display: 'inline-flex' }}>{navIcon(item)}</Box>
               <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
                 {item.label}
               </Typography>
@@ -176,7 +193,7 @@ export function BuyerLayout({ children, hideBottomNav }: Props) {
             key={item.value}
             label={item.label}
             value={item.value}
-            icon={<Iconify icon={item.icon} width={24} />}
+            icon={navIcon(item)}
           />
         ))}
       </BottomNavigation>

@@ -35,6 +35,17 @@ export async function fetchMyNotifications(userId: string): Promise<BuyerNotific
   return ((data ?? []) as DbNotification[]).map(mapNotification);
 }
 
+// Admin-only (RLS): create a notification for a buyer — e.g. when their order's
+// confirmed price changes. Caller should skip this for guest orders (no user).
+export async function createNotification(
+  userId: string,
+  text: string,
+  type: 'order' | 'promo' = 'order'
+): Promise<void> {
+  const { error } = await supabase.from('notifications').insert({ user_id: userId, text, type });
+  if (error) throw error;
+}
+
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   const { error } = await supabase
     .from('notifications')

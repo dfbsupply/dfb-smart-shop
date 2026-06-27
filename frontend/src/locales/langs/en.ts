@@ -13,6 +13,11 @@ export const en = {
   },
   footer: {
     address: 'Felix Y. Manalo St., San Isidro, Cainta, Rizal · Serving since 2019',
+    tagline: 'Custom glass & aluminum — windows, doors, shower enclosures, and more.',
+    quickLinks: 'Quick Links',
+    visitUs: 'Visit Us',
+    hoursValue: 'Mon – Sat · 8:00 AM – 6:00 PM',
+    rights: 'All rights reserved.',
     shop: 'Shop',
     visualSearch: 'Visual Search',
     aboutUs: 'About Us',

@@ -10,6 +10,7 @@ import IconButton from '@mui/material/IconButton';
 import { RouterLink } from 'src/routes/components';
 
 import { useAsync } from 'src/hooks/use-async';
+import { useRealtimeRefetch } from 'src/hooks/use-realtime';
 
 import { fDate } from 'src/utils/format-time';
 
@@ -30,7 +31,7 @@ export function BuyerHomeView() {
   const { user, profile } = useAuth();
   const firstName = profile?.full_name?.trim().split(' ')[0] || 'there';
 
-  const { data } = useAsync(async () => {
+  const { data, refetch } = useAsync(async () => {
     if (!user) return { orders: [], unread: 0 };
     const [orders, notifs] = await Promise.all([
       fetchMyOrders(user.id),
@@ -38,6 +39,9 @@ export function BuyerHomeView() {
     ]);
     return { orders, unread: notifs.filter((n) => !n.read).length };
   }, [user?.id]);
+
+  // Live-update orders + the bell badge when they change in Supabase.
+  useRealtimeRefetch(['orders', 'notifications'], refetch);
 
   const orders = useMemo(() => data?.orders ?? [], [data]);
   const unread = data?.unread ?? 0;

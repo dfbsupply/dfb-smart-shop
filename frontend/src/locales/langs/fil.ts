@@ -14,6 +14,11 @@ export const fil: Translation = {
   },
   footer: {
     address: 'Felix Y. Manalo St., San Isidro, Cainta, Rizal · Naglilingkod simula 2019',
+    tagline: 'Pasadyang salamin at aluminyo — bintana, pinto, shower enclosure, at iba pa.',
+    quickLinks: 'Mga Link',
+    visitUs: 'Bisitahin Kami',
+    hoursValue: 'Lun – Sab · 8:00 AM – 6:00 PM',
+    rights: 'Nakalaan ang lahat ng karapatan.',
     shop: 'Tindahan',
     visualSearch: 'Hanap sa Larawan',
     aboutUs: 'Tungkol Sa Amin',

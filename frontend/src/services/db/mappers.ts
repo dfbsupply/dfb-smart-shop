@@ -62,6 +62,7 @@ export function mapOrder(db: DbOrder & { order_items?: DbOrderItem[] }): Order {
   return {
     id: db.id,
     code: db.code,
+    customerId: db.customer_id ?? null,
     customerName: db.customer_name,
     customerMobile: db.customer_mobile,
     customerEmail: db.customer_email ?? '',

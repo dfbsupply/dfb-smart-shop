@@ -30,8 +30,8 @@ import { useAsync } from 'src/hooks/use-async';
 import { fDateTime } from 'src/utils/format-time';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { fetchOrder, updateOrder } from 'src/services/db';
 import { fPeso, formatItemSize, computeUnitPrice } from 'src/data/pricing';
+import { fetchOrder, updateOrder, createNotification } from 'src/services/db';
 import {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
@@ -49,6 +49,17 @@ import { printOrderSlip } from '../print-order-slip';
 // ----------------------------------------------------------------------
 // A-4. Order Detail (Admin View) — full price breakdown + manual status.
 // ----------------------------------------------------------------------
+
+// Buyer-facing phrasing for each status, used in the notification we send the
+// customer whenever the order's status changes.
+const STATUS_NOTIFY: Record<OrderStatus, string> = {
+  new: 'has been received',
+  pending: 'is being reviewed',
+  confirmed: 'has been confirmed',
+  ready: 'is ready for pickup',
+  completed: 'is now complete',
+  cancelled: 'has been cancelled',
+};
 
 export function OrderDetailView() {
   const { id } = useParams();
@@ -93,12 +104,29 @@ export function OrderDetailView() {
     );
   }
 
+  // Notify the buyer's account about a status change (skips guest orders and is
+  // best-effort so a failed notification never blocks the update).
+  const notifyStatus = async (next: OrderStatus): Promise<boolean> => {
+    if (!order?.customerId) return false;
+    try {
+      await createNotification(order.customerId, `Your order ${order.code} ${STATUS_NOTIFY[next]}.`);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleUpdateStatus = async () => {
-    if (!id) return;
+    if (!id || !order) return;
     setSaving(true);
     try {
       await updateOrder(id, { status });
-      showToast('Order updated. Customer will see the new status.');
+      const notified = status !== order.status && (await notifyStatus(status));
+      showToast(
+        notified
+          ? 'Order updated. The customer has been notified.'
+          : 'Order updated. Customer will see the new status.'
+      );
       refetch();
     } catch {
       showToast('Could not update order.', 'error');
@@ -108,14 +136,33 @@ export function OrderDetailView() {
   };
 
   const handleSave = async () => {
-    if (!id) return;
+    if (!id || !order) return;
     setSaving(true);
+    const newAmount = confirmedAmount === '' ? null : Number(confirmedAmount);
+    const prevAmount = order.confirmedAmount ?? null;
+    const amountChanged = newAmount !== null && newAmount !== prevAmount;
     try {
       await updateOrder(id, {
-        confirmedAmount: confirmedAmount === '' ? null : Number(confirmedAmount),
+        confirmedAmount: newAmount,
         staffNote: staffNote.trim() || null,
       });
-      showToast('Changes saved.');
+
+      // Notify the buyer's account when the confirmed price changes (guests have
+      // no account, so there's nothing to notify). Non-fatal if it fails.
+      let notified = false;
+      if (amountChanged && order.customerId) {
+        try {
+          await createNotification(
+            order.customerId,
+            `Your order ${order.code} total has been confirmed: ${fPeso(newAmount)}.`
+          );
+          notified = true;
+        } catch {
+          /* notification is best-effort */
+        }
+      }
+
+      showToast(notified ? 'Saved. The customer has been notified.' : 'Changes saved.');
       refetch();
     } catch {
       showToast('Could not save changes.', 'error');
@@ -129,6 +176,7 @@ export function OrderDetailView() {
     try {
       await updateOrder(id, { status: 'cancelled' });
       setStatus('cancelled');
+      await notifyStatus('cancelled');
       showToast('Order cancelled.', 'warning');
       refetch();
     } catch {
@@ -241,20 +289,31 @@ export function OrderDetailView() {
                 </Typography>
                 <Typography variant="subtitle1">{fPeso(order.estTotal)}</Typography>
               </Box>
-              <Box sx={{ width: 260 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  label="Final Confirmed Amount"
-                  placeholder="Enter confirmed price"
-                  value={confirmedAmount}
-                  onChange={(e) => setConfirmedAmount(e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <Box sx={{ width: 260 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    label="Final Confirmed Amount"
+                    placeholder="Enter confirmed price"
+                    value={confirmedAmount}
+                    onChange={(e) => setConfirmedAmount(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </Box>
+                <Button
+                  variant="contained"
+                  onClick={handleSave}
+                  loading={saving}
+                  startIcon={<Iconify icon="solar:diskette-bold" />}
+                >
+                  Save
+                </Button>
               </Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Payment is arranged with the customer offline.
+              <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'right' }}>
+                Saving the confirmed amount notifies the customer&apos;s account. Payment is arranged
+                with the customer offline.
               </Typography>
             </Stack>
           </Card>

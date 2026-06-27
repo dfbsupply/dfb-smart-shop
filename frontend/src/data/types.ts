@@ -68,6 +68,7 @@ export type OrderItem = {
 export type Order = {
   id: string;
   code: string; // #DFB-XXXX
+  customerId?: string | null; // buyer account id (null/undefined for guest orders)
   customerName: string;
   customerMobile: string;
   customerEmail: string;
