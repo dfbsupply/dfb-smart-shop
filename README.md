@@ -119,7 +119,7 @@ email locally, use `vercel dev` with a gitignored `.env` holding `RESEND_API_KEY
 
 ## Deploy
 
-Deployed to **Vercel** with **Root Directory = `frontend`**; the Namecheap domain
+Deployed to **Vercel** with **Root Directory = `frontend`**; the domain
 points at Vercel and Resend sends order email. Step-by-step guide (env vars, DNS,
 domain verification) in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
