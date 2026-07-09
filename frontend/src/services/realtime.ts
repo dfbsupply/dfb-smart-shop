@@ -13,9 +13,18 @@ import { supabase } from 'src/lib/supabase';
 //   alter publication supabase_realtime add table public.promos;
 // ----------------------------------------------------------------------
 
+// Monotonic id so every subscription gets a distinct channel topic. Two
+// components can subscribe to the same table concurrently (e.g. the buyer
+// layout's unread badge and the buyer home view both watch `notifications`);
+// without a unique suffix they'd share the topic `realtime:<table>`, and
+// supabase-js would hand the second caller the already-subscribed channel —
+// making the `.on('postgres_changes', …)` call throw.
+let channelSeq = 0;
+
 export function subscribeTable(table: string, onChange: () => void): () => void {
+  channelSeq += 1;
   const channel = supabase
-    .channel(`realtime:${table}`)
+    .channel(`realtime:${table}:${channelSeq}`)
     .on('postgres_changes', { event: '*', schema: 'public', table }, () => onChange())
     .subscribe();
 
