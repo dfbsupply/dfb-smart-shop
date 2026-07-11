@@ -134,6 +134,11 @@ let knnExamples = 0;
 let datasetCache: Dataset | null = null;
 let trainPerClass: { label: string; count: number }[] = [];
 
+// Nearest neighbors used for a prediction. The dataset is small and hand-curated,
+// so a low k lets the single most-similar training photo win instead of being
+// out-voted by look-alike neighbors from another category.
+const KNN_K = 3;
+
 function loadImageEl(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -200,7 +205,7 @@ export async function predictCategory(
   if (!knn || knn.getNumClasses() === 0) return null;
   const model = await loadModel();
   const embedding = model.infer(image, true) as Tensor;
-  const prediction = await knn.predictClass(embedding, Math.min(5, knnExamples));
+  const prediction = await knn.predictClass(embedding, Math.min(KNN_K, knnExamples));
   embedding.dispose();
   return { label: prediction.label, confidence: prediction.confidences[prediction.label] ?? 0 };
 }
@@ -311,7 +316,7 @@ export async function benchmarkModel(): Promise<BenchmarkResult> {
     macroF1: macro((m) => m.f1),
     model: {
       name: 'MobileNet (1024-D embedding) + K-Nearest-Neighbors',
-      k: Math.min(5, knnExamples),
+      k: Math.min(KNN_K, knnExamples),
       embeddingDim: 1024,
       trainTotal: knnExamples,
       trainPerClass,

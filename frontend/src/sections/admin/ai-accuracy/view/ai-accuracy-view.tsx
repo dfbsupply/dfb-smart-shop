@@ -106,9 +106,15 @@ export function AiAccuracyView() {
         const preds = await classifyImage(img);
         const topLabel = preds[0]?.label ?? '—';
 
+        // Gate: does the photo even look like something we sell? If the raw
+        // ImageNet labels map to no shop concept at all (e.g. a dog), it is not
+        // a product and we don't force it into a category.
+        const bridged = matchProductsByLabels(preds, products);
+
         // What category does our trained model assign it to, and how sure is it?
-        const prediction = await predictCategory(img);
-        const predicted = prediction?.label ?? matchProductsByLabels(preds, products)[0]?.category;
+        const prediction = bridged.length > 0 ? await predictCategory(img) : null;
+        const predicted =
+          bridged.length > 0 ? prediction?.label ?? bridged[0]?.category : undefined;
 
         setRows((cur) =>
           cur.map((r) =>
@@ -381,7 +387,7 @@ export function AiAccuracyView() {
                             ) : (
                               <>
                                 <Typography variant="subtitle2">
-                                  {row.predicted ?? 'No match'}
+                                  {row.predicted ?? 'Not a product photo'}
                                   {row.confidence != null && row.predicted
                                     ? ` · ${pct(row.confidence)} sure`
                                     : ''}
