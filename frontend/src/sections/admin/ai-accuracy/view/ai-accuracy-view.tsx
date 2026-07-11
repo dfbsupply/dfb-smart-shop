@@ -1,4 +1,3 @@
-import type { Product } from 'src/data/types';
 import type { BenchmarkResult } from 'src/services/ai';
 
 import { useState, useCallback } from 'react';
@@ -30,8 +29,8 @@ import {
   isKnnTrained,
   classifyImage,
   benchmarkModel,
+  predictCategory,
   trainCategoryModel,
-  matchProductsByImage,
   matchProductsByLabels,
 } from 'src/services/ai';
 
@@ -53,8 +52,9 @@ type Row = {
   id: string;
   url: string;
   expectedId: string;
-  topLabel?: string;
-  matches?: Product[];
+  topLabel?: string; // raw MobileNet guess, e.g. "window screen" / "tabby cat"
+  predicted?: string; // category the model assigned, e.g. "Screens"
+  confidence?: number; // 0..1, how sure the model is
   done?: boolean;
 };
 
@@ -99,22 +99,29 @@ export function AiAccuracyView() {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.src = row.url;
-         
+
         await img.decode();
-         
+
+        // What does MobileNet literally see in the photo? (raw ImageNet label)
         const preds = await classifyImage(img);
-         
-        const matches = isKnnTrained()
-          ? await matchProductsByImage(img, products)
-          : matchProductsByLabels(preds, products);
+        const topLabel = preds[0]?.label ?? '—';
+
+        // What category does our trained model assign it to, and how sure is it?
+        const prediction = await predictCategory(img);
+        const predicted = prediction?.label ?? matchProductsByLabels(preds, products)[0]?.category;
+
         setRows((cur) =>
           cur.map((r) =>
-            r.id === row.id ? { ...r, topLabel: preds[0]?.label ?? '—', matches, done: true } : r
+            r.id === row.id
+              ? { ...r, topLabel, predicted, confidence: prediction?.confidence, done: true }
+              : r
           )
         );
       } catch {
         setRows((cur) =>
-          cur.map((r) => (r.id === row.id ? { ...r, topLabel: 'error', matches: [], done: true } : r))
+          cur.map((r) =>
+            r.id === row.id ? { ...r, topLabel: 'error', predicted: undefined, done: true } : r
+          )
         );
       }
     }
@@ -294,7 +301,7 @@ export function AiAccuracyView() {
       <Card>
         <CardHeader
           title="Try your own photos"
-          subheader="Upload photos, mark the expected product, and run the model on them."
+          subheader="Upload any photo and set what it should be (Expected). The model tells you what it thinks the photo is (AI detected), and the Result shows whether they match."
         />
         <Box sx={{ p: 3 }}>
           <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
@@ -331,14 +338,15 @@ export function AiAccuracyView() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Photo</TableCell>
-                      <TableCell>Expected product</TableCell>
-                      <TableCell>Matched category</TableCell>
+                      <TableCell>Expected (you set)</TableCell>
+                      <TableCell>AI detected</TableCell>
                       <TableCell align="center">Result</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {rows.map((row) => {
-                      const ok = !!row.done && row.matches?.[0]?.category === catOf(row.expectedId);
+                      const expectedCat = catOf(row.expectedId);
+                      const ok = !!row.done && !!row.predicted && row.predicted === expectedCat;
                       return (
                         <TableRow key={row.id}>
                           <TableCell>
@@ -361,17 +369,54 @@ export function AiAccuracyView() {
                                 </MenuItem>
                               ))}
                             </Select>
+                            {expectedCat && (
+                              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                                Category: {expectedCat}
+                              </Typography>
+                            )}
                           </TableCell>
-                          <TableCell sx={{ color: 'text.secondary' }}>
-                            {row.matches?.length ? row.matches[0].category : row.done ? 'No match' : '—'}
+                          <TableCell sx={{ minWidth: 200 }}>
+                            {!row.done ? (
+                              <Typography sx={{ color: 'text.disabled' }}>—</Typography>
+                            ) : (
+                              <>
+                                <Typography variant="subtitle2">
+                                  {row.predicted ?? 'No match'}
+                                  {row.confidence != null && row.predicted
+                                    ? ` · ${pct(row.confidence)} sure`
+                                    : ''}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  Photo looks like: {row.topLabel}
+                                </Typography>
+                              </>
+                            )}
                           </TableCell>
                           <TableCell align="center">
                             {!row.done || !row.expectedId ? (
-                              '—'
+                              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                                {row.done ? 'set expected' : '—'}
+                              </Typography>
                             ) : ok ? (
-                              <Iconify icon="solar:check-circle-bold" sx={{ color: 'success.main' }} />
+                              <Stack alignItems="center">
+                                <Iconify
+                                  icon="solar:check-circle-bold"
+                                  sx={{ color: 'success.main' }}
+                                />
+                                <Typography variant="caption" sx={{ color: 'success.main' }}>
+                                  Match
+                                </Typography>
+                              </Stack>
                             ) : (
-                              <Iconify icon="solar:close-circle-bold" sx={{ color: 'error.main' }} />
+                              <Stack alignItems="center">
+                                <Iconify
+                                  icon="solar:close-circle-bold"
+                                  sx={{ color: 'error.main' }}
+                                />
+                                <Typography variant="caption" sx={{ color: 'error.main' }}>
+                                  Different
+                                </Typography>
+                              </Stack>
                             )}
                           </TableCell>
                         </TableRow>
